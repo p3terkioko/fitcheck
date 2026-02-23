@@ -1,0 +1,30 @@
+# FastAPI and server
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0
+
+# Database (SQLite for dev, PostgreSQL for production)
+# Note: sqlite3 is built into Python
+
+# ML and NLP (CPU-only, no CUDA)
+sentence-transformers==2.7.0
+numpy>=1.24.4
+scikit-learn>=1.3.0
+
+# PDF processing
+pypdf==3.17.1
+python-multipart==0.0.6
+
+# Text processing (optional - remove if not needed)
+# nltk==3.8.1
+# spacy==3.7.2
+# textstat==0.7.3
+
+# Utilities
+python-dotenv==1.0.0
+requests>=2.31.0
+tqdm>=4.66.1
+pandas>=2.1.4
+
+# Logging
+loguru==0.7.2
