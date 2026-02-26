@@ -6,6 +6,8 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const axios = require('axios');
 const Joi = require('joi');
+const { transcribeUrl, cleanupDir, SUPPORTED_DOMAINS } = require('./services/transcription');
+const { extractClaims } = require('./services/claimExtraction');
 
 const app = express();
 const PORT = process.env.NODE_PORT || 3000;
@@ -26,6 +28,12 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Validation schemas
+const searchSchema = Joi.object({
+    query: Joi.string().min(1).max(2000).required(),
+    max_results: Joi.number().integer().min(1).max(20).default(5),
+    similarity_threshold: Joi.number().min(0).max(1).default(0.5)
+});
+
 const verifySchema = Joi.object({
     claim: Joi.string().min(10).max(2000).required().messages({
         'string.min': 'Claim must be at least 10 characters long',
@@ -35,11 +43,11 @@ const verifySchema = Joi.object({
     max_results: Joi.number().integer().min(1).max(20).default(5),
     similarity_threshold: Joi.number().min(0).max(1).default(0.5),
     synthesize_response: Joi.boolean().default(true), // New option for LLM synthesis
-    llm_provider: Joi.string().valid('groq', 'openai', 'none').default('groq')
+    llm_provider: Joi.string().valid('groq', 'none').default('groq')
 });
 
 // Utility functions
-function logRequest(req, startTime) {
+function logRequest(req) {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - Processing claim: "${req.body.claim?.substring(0, 100)}${req.body.claim?.length > 100 ? '...' : ''}"`);
 }
 
@@ -50,7 +58,7 @@ function logResponse(req, results, duration) {
 /**
  * Synthesize answer using LLM based on search results
  */
-async function synthesizeResponse(claim, searchResults, llmProvider = 'ollama') {
+async function synthesizeResponse(claim, searchResults, llmProvider = 'groq') {
     if (!searchResults || searchResults.length === 0) {
         return {
             synthesized_answer: "No relevant research evidence was found for this claim. This might indicate that the claim is either unsupported by current literature, uses terminology not found in the research database, or requires reformulation using different keywords.",
@@ -85,9 +93,11 @@ Respond with a JSON object containing these exact fields:
   "reliability_note": "Brief note about study quality or limitations"
 }
 
-Be conversational and natural in the summary - like you're explaining to a friend, not writing a medical journal.`;
+Be conversational and natural in the summary - like you're explaining to a friend, not writing a medical journal.
 
-        let synthesizedResponse = '';
+IMPORTANT: Output ONLY the raw JSON object. No preamble, no markdown code fences, no explanation. Start your response with { and end with }.`;
+
+        let parsedResponse = null;
 
         if (llmProvider === 'groq') {
             // Use Groq API for fast Llama inference
@@ -99,9 +109,9 @@ Be conversational and natural in the summary - like you're explaining to a frien
 
                 const groqResponse = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
                     model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
-                    messages: [{ 
-                        role: 'user', 
-                        content: prompt 
+                    messages: [{
+                        role: 'user',
+                        content: prompt
                     }],
                     max_tokens: 400,
                     temperature: 0.7,
@@ -114,18 +124,21 @@ Be conversational and natural in the summary - like you're explaining to a frien
                     timeout: 15000 // Groq is very fast
                 });
 
-                synthesizedResponse = groqResponse.data.choices[0].message.content;
-                
+                const rawResponse = groqResponse.data.choices[0].message.content;
+
+                // Extract JSON object from anywhere in the response (handles preamble + code fences)
+                const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
+                const cleanResponse = jsonMatch ? jsonMatch[0] : rawResponse.trim();
+
                 // Try to parse the JSON response from LLM
-                let parsedResponse;
                 try {
-                    parsedResponse = JSON.parse(synthesizedResponse);
+                    parsedResponse = JSON.parse(cleanResponse);
                 } catch (parseError) {
                     console.log('LLM response parsing failed, using fallback format');
                     parsedResponse = {
                         verdict: "INSUFFICIENT_EVIDENCE",
                         confidence: "low",
-                        summary: synthesizedResponse.substring(0, 200) + "...",
+                        summary: rawResponse.substring(0, 200) + "...",
                         key_points: ["Response format error occurred"],
                         sources_analyzed: searchResults.length,
                         reliability_note: "Technical parsing issue with response"
@@ -138,27 +151,6 @@ Be conversational and natural in the summary - like you're explaining to a frien
                 }
                 throw new Error('Groq API unavailable');
             }
-        } else if (llmProvider === 'openai') {
-            // OpenAI API integration (requires API key)
-            const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-            if (!OPENAI_API_KEY) {
-                throw new Error('OpenAI API key not configured');
-            }
-
-            const openaiResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
-                model: 'gpt-3.5-turbo',
-                messages: [{ role: 'user', content: prompt }],
-                max_tokens: 500,
-                temperature: 0.3
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${OPENAI_API_KEY}`,
-                    'Content-Type': 'application/json'
-                },
-                timeout: 30000
-            });
-
-            synthesizedResponse = openaiResponse.data.choices[0].message.content;
         }
 
         // Determine confidence based on evidence quality
@@ -186,14 +178,14 @@ Be conversational and natural in the summary - like you're explaining to a frien
         console.log('LLM synthesis failed, using fallback:', error.message);
         
         // Fallback to rule-based synthesis
-        return generateFallbackResponse(claim, searchResults);
+        return generateFallbackResponse(searchResults);
     }
 }
 
 /**
  * Fallback response generation when LLM is unavailable
  */
-function generateFallbackResponse(claim, searchResults) {
+function generateFallbackResponse(searchResults) {
     const topResult = searchResults[0];
     const avgSimilarity = searchResults.reduce((sum, r) => sum + r.similarity_score, 0) / searchResults.length;
     
@@ -309,7 +301,7 @@ app.post('/api/verify', async (req, res) => {
 
         const { claim, max_results, similarity_threshold, synthesize_response, llm_provider } = value;
         
-        logRequest(req, startTime);
+        logRequest(req);
 
         // Call ML service for semantic search
         const searchResponse = await axios.post(`${ML_SERVICE_URL}/search`, {
@@ -440,7 +432,16 @@ app.post('/api/verify', async (req, res) => {
  */
 app.post('/api/search', async (req, res) => {
     try {
-        const response = await axios.post(`${ML_SERVICE_URL}/search`, req.body, {
+        const { error, value } = searchSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid request',
+                details: error.details[0].message
+            });
+        }
+
+        const response = await axios.post(`${ML_SERVICE_URL}/search`, value, {
             timeout: 30000,
             headers: { 'Content-Type': 'application/json' }
         });
@@ -461,6 +462,211 @@ app.post('/api/search', async (req, res) => {
     }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Transcription endpoint
+// POST /api/transcribe
+// Body: { url: "https://tiktok.com/..." }
+// Returns: { transcript, audioSizeBytes, supported_platforms }
+// ─────────────────────────────────────────────────────────────────────────────
+const transcribeSchema = Joi.object({
+    url: Joi.string().uri().required().messages({
+        'string.uri': 'Please provide a valid URL including https://',
+        'any.required': 'A video URL is required'
+    })
+});
+
+app.post('/api/transcribe', async (req, res) => {
+    const { error, value } = transcribeSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({
+            success: false,
+            error: 'Invalid request',
+            details: error.details[0].message
+        });
+    }
+
+    console.log(`[${new Date().toISOString()}] POST /api/transcribe - URL: ${value.url}`);
+    const start = Date.now();
+
+    let tmpDir = null;
+    try {
+        const result = await transcribeUrl(value.url);
+        tmpDir = result.tmpDir;
+
+        res.json({
+            success: true,
+            data: {
+                transcript: result.transcript,
+                audio_size_bytes: result.audioSizeBytes,
+                url: value.url
+            },
+            metadata: {
+                processing_time_ms: Date.now() - start,
+                timestamp: new Date().toISOString()
+            }
+        });
+    } catch (err) {
+        res.status(422).json({
+            success: false,
+            error: err.message,
+            supported_platforms: SUPPORTED_DOMAINS,
+            timestamp: new Date().toISOString()
+        });
+    } finally {
+        if (tmpDir) cleanupDir(tmpDir);
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Full social media analysis pipeline
+// POST /api/analyze-url
+// Body: { url: "https://tiktok.com/...", max_results: 5 }
+//
+// Pipeline:
+//   URL → yt-dlp (audio) → Whisper (transcript) → Groq (extract claims)
+//   → for each claim: RAG search + Groq synthesis → verdict
+// Returns: { transcript, claims: [{ claim, verdict, confidence, ... }] }
+// ─────────────────────────────────────────────────────────────────────────────
+const analyzeUrlSchema = Joi.object({
+    url: Joi.string().uri().required().messages({
+        'string.uri': 'Please provide a valid URL including https://',
+        'any.required': 'A video URL is required'
+    }),
+    max_results: Joi.number().integer().min(1).max(10).default(5)
+});
+
+app.post('/api/analyze-url', async (req, res) => {
+    const { error, value } = analyzeUrlSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({
+            success: false,
+            error: 'Invalid request',
+            details: error.details[0].message
+        });
+    }
+
+    console.log(`[${new Date().toISOString()}] POST /api/analyze-url - URL: ${value.url}`);
+    const pipelineStart = Date.now();
+
+    let tmpDir = null;
+    try {
+        // ── Step 1: Download audio and transcribe ──────────────────────────
+        console.log('  [1/3] Transcribing audio...');
+        const transcribeStart = Date.now();
+        const { transcript, audioSizeBytes, tmpDir: td } = await transcribeUrl(value.url);
+        tmpDir = td;
+        const transcribeMs = Date.now() - transcribeStart;
+        console.log(`  [1/3] Transcript ready (${transcript.split(/\s+/).length} words, ${transcribeMs}ms)`);
+
+        // ── Step 2: Extract fitness/nutrition claims from transcript ───────
+        console.log('  [2/3] Extracting claims from transcript...');
+        const extractStart = Date.now();
+        const claims = await extractClaims(transcript);
+        const extractMs = Date.now() - extractStart;
+        console.log(`  [2/3] Extracted ${claims.length} claim(s) (${extractMs}ms)`);
+
+        if (claims.length === 0) {
+            return res.json({
+                success: true,
+                data: {
+                    url: value.url,
+                    transcript,
+                    audio_size_bytes: audioSizeBytes,
+                    claims_found: 0,
+                    claims: [],
+                    message: 'No verifiable fitness or nutrition claims were identified in this video.'
+                },
+                metadata: {
+                    transcription_ms: transcribeMs,
+                    extraction_ms: extractMs,
+                    total_processing_ms: Date.now() - pipelineStart,
+                    timestamp: new Date().toISOString()
+                }
+            });
+        }
+
+        // ── Step 3: Verify each claim through the RAG pipeline ─────────────
+        console.log(`  [3/3] Verifying ${claims.length} claim(s)...`);
+        const verifyStart = Date.now();
+
+        const verifiedClaims = await Promise.all(
+            claims.map(async (claim, idx) => {
+                try {
+                    // Re-use the existing /api/verify logic by calling the
+                    // ML service directly and synthesising inline.
+                    const searchResp = await axios.post(
+                        `${ML_SERVICE_URL}/search`,
+                        { query: claim, max_results: value.max_results, similarity_threshold: 0.4 },
+                        { timeout: 30000 }
+                    );
+                    const searchResults = searchResp.data.results || [];
+                    const synthesis = await synthesizeResponse(claim, searchResults, 'groq');
+
+                    return {
+                        claim_index: idx + 1,
+                        claim,
+                        verdict: synthesis.synthesized_answer?.verdict || 'INSUFFICIENT_EVIDENCE',
+                        confidence: synthesis.synthesized_answer?.confidence || 'low',
+                        summary: synthesis.synthesized_answer?.summary || '',
+                        key_points: synthesis.synthesized_answer?.key_points || [],
+                        reliability_note: synthesis.synthesized_answer?.reliability_note || '',
+                        sources_analyzed: searchResults.length,
+                        top_similarity: synthesis.top_similarity || 0,
+                        sources: searchResults.slice(0, 3).map(r => ({
+                            title: r.title,
+                            similarity_score: r.similarity_score,
+                            doi: r.doi || null,
+                            journal: r.journal || null,
+                            year: r.publication_year || null
+                        }))
+                    };
+                } catch (claimErr) {
+                    return {
+                        claim_index: idx + 1,
+                        claim,
+                        verdict: 'INSUFFICIENT_EVIDENCE',
+                        confidence: 'low',
+                        summary: 'Verification failed for this claim.',
+                        error: claimErr.message
+                    };
+                }
+            })
+        );
+
+        const verifyMs = Date.now() - verifyStart;
+        console.log(`  [3/3] Verification complete (${verifyMs}ms)`);
+
+        res.json({
+            success: true,
+            data: {
+                url: value.url,
+                transcript,
+                audio_size_bytes: audioSizeBytes,
+                claims_found: claims.length,
+                claims: verifiedClaims
+            },
+            metadata: {
+                transcription_ms: transcribeMs,
+                extraction_ms: extractMs,
+                verification_ms: verifyMs,
+                total_processing_ms: Date.now() - pipelineStart,
+                timestamp: new Date().toISOString()
+            }
+        });
+
+    } catch (err) {
+        console.error('analyze-url pipeline error:', err.message);
+        res.status(422).json({
+            success: false,
+            error: err.message,
+            supported_platforms: SUPPORTED_DOMAINS,
+            timestamp: new Date().toISOString()
+        });
+    } finally {
+        if (tmpDir) cleanupDir(tmpDir);
+    }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Unhandled error:', err);
@@ -478,9 +684,11 @@ app.use((req, res) => {
         error: 'Endpoint not found',
         available_endpoints: [
             'GET /health',
-            'GET /api/stats', 
+            'GET /api/stats',
             'POST /api/verify',
-            'POST /api/search'
+            'POST /api/search',
+            'POST /api/transcribe',
+            'POST /api/analyze-url'
         ],
         timestamp: new Date().toISOString()
     });

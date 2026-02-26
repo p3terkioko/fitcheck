@@ -7,25 +7,30 @@
     "start": "node server.js",
     "dev": "concurrently \"npm run dev:node\" \"npm run dev:python\"",
     "dev:node": "nodemon server.js",
-    "dev:python": "cd ml_service && python -m uvicorn main:app --reload --port 8000",
-    "ingest": "cd scripts && python ingest_papers.py",
-    "setup:db": "psql -U postgres -d fitcheck -f database/schema.sql"
+    "dev:python": "cd ml_service && ../venv/bin/python -m uvicorn main:app --reload --port 8000",
+    "ingest": "cd scripts && ../venv/bin/python ingest_papers.py",
+    "enrich": "cd scripts && ../venv/bin/python enrich_papers.py",
+    "fetch": "cd scripts && ../venv/bin/python fetch_fitness_papers.py",
+    "setup:db": "psql -U postgres -d fitcheck -f database/schema_postgresql.sql"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "axios": "^1.6.2",
     "cors": "^2.8.5",
-    "helmet": "^7.1.0",
     "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "joi": "^17.11.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.2",
+    "openai": "^6.25.0",
     "pg": "^8.11.3",
     "pgvector": "^0.1.8",
-    "axios": "^1.6.2",
-    "express-rate-limit": "^7.1.5",
-    "morgan": "^1.10.0",
-    "joi": "^17.11.0"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
   },
   "engines": {
     "node": ">=18.0.0"
