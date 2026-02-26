@@ -357,8 +357,81 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════ SLIDE 7 — Milestone 1 Responses ════════ -->
+<!-- ═══════════════════════════ SLIDE 7 — Research Objectives ══════════ -->
 <div class="slide" id="s7">
+  <div class="label">Research Objectives</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Objective</th><th>Deliverable</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Review literature on fitness misinformation detection and RAG-based fact verification</td>
+          <td>Understanding of detection approaches and evidence retrieval techniques</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+        <tr>
+          <td>Curate <b>peer-reviewed exercise science papers</b> via PubMed E-utilities API</td>
+          <td><b>921 papers</b> — resistance training, sports nutrition, HIIT, metabolic health</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+        <tr>
+          <td>Identify gaps in <b>automated fitness claim verification</b> approaches</td>
+          <td>System requirements — RAG over static classifier, URL pipeline over text-only input</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+        <tr>
+          <td>Define a <b>verdict taxonomy</b> for fitness and nutrition claim classification</td>
+          <td>Four outcomes: SUPPORTED · PARTIALLY SUPPORTED · NOT SUPPORTED · INSUFFICIENT EVIDENCE</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 7b — System Dev Objectives ════════ -->
+<div class="slide" id="s7b">
+  <div class="label">System Development Objectives</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Component</th><th>Goal</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Knowledge Base &amp; Embeddings</b></td>
+          <td>37,455 paper chunks embedded with sentence-transformers and indexed via pgvector</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+        <tr>
+          <td><b>RAG Verification Engine</b></td>
+          <td>Cosine similarity retrieval + Llama 3.1 synthesis producing structured verdicts with confidence and citations</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+        <tr>
+          <td><b>Social Media URL Pipeline</b></td>
+          <td>yt-dlp → Whisper → LLM claim extraction → per-claim RAG verification</td>
+          <td class="ahead">✅ Complete — ahead of schedule</td>
+        </tr>
+        <tr>
+          <td><b>Web Interface</b></td>
+          <td>React frontend with claim input form, results display, and medical disclaimers</td>
+          <td class="pending">⏳ In progress</td>
+        </tr>
+        <tr>
+          <td><b>Validation</b></td>
+          <td>System accuracy testing with known fitness misinformation examples</td>
+          <td class="pending">⏳ Upcoming</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 9 — Milestone 1 Responses ════════ -->
+<div class="slide" id="s9">
   <div class="label">Response to Milestone 1 Feedback</div>
   <div class="tbl-wrap">
     <table>
@@ -383,8 +456,8 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════ SLIDE 8 — Literature Review ════════════ -->
-<div class="slide" id="s8">
+<!-- ══════════════════════════ SLIDE 10 — Literature Review ════════════ -->
+<div class="slide" id="s10">
   <div class="label">Literature Review</div>
   <div class="tbl-wrap">
     <table>
@@ -422,8 +495,8 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════ SLIDE 9 — Similar Systems ══════════════ -->
-<div class="slide" id="s9">
+<!-- ══════════════════════════ SLIDE 11 — Similar Systems ══════════════ -->
+<div class="slide" id="s11">
   <div class="label">Literature Review — Similar Systems</div>
   <div class="tbl-wrap">
     <table>
@@ -461,8 +534,8 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════ SLIDE 10 — Technical Literature ════════ -->
-<div class="slide" id="s10">
+<!-- ══════════════════════════ SLIDE 12 — Technical Literature ══════════ -->
+<div class="slide" id="s12">
   <div class="label">Literature Review — Technical Approaches</div>
   <div class="tbl-wrap">
     <table>
@@ -495,8 +568,8 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════ SLIDE 11 — What Remains ════════════════ -->
-<div class="slide" id="s11">
+<!-- ══════════════════════════ SLIDE 13 — What Remains ══════════════════ -->
+<div class="slide" id="s13">
   <div class="label">What Remains</div>
   <ul class="blist">
     <li><b>React frontend</b> — input form, per-claim verdict cards, results display</li>
@@ -506,8 +579,8 @@
   </ul>
 </div>
 
-<!-- ═══════════════════════════ SLIDE 12 — Demo ═════════════════════════ -->
-<div class="slide bar" id="s12">
+<!-- ══════════════════════════ SLIDE 14 — Demo ══════════════════════════ -->
+<div class="slide bar" id="s14">
   <p class="title-main" style="font-size:86px; margin-bottom:0;">Demo</p>
 </div>
 

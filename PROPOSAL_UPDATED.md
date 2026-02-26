@@ -119,13 +119,13 @@ Current digital platforms lack automated systems capable of identifying and veri
 
 ### 1.3 Objectives for the Project
 
-1. Develop a natural language processing system for extracting and classifying exercise and nutrition claims from textual content.
+1. Build a curated knowledge base of 921 peer-reviewed fitness and nutrition research papers and implement a semantic embedding pipeline using sentence-transformers to enable evidence retrieval via pgvector cosine similarity search.
 
-2. Create a machine learning model trained on peer-reviewed exercise science literature to assess claim validity and provide confidence scores.
+2. Develop a Retrieval-Augmented Generation verification engine that retrieves the most contextually relevant research segments and employs the Llama 3.1 large language model to synthesise structured verdicts accompanied by confidence levels, evidence summaries, and source citations.
 
-3. Design and implement a web-based interface that allows users to submit content for automated fact-checking with appropriate disclaimers.
+3. Implement a social media URL processing pipeline that extracts audio from TikTok, Instagram, and YouTube videos using yt-dlp and ffmpeg, transcribes speech to text via the OpenAI Whisper API, and applies LLM-based claim extraction to identify individual verifiable fitness assertions from the transcript for independent RAG verification.
 
-4. Validate system accuracy through testing with known misinformation examples and expert evaluation.
+4. Design and implement a web-based interface enabling users to submit text claims or social media URLs for automated fact-checking, and validate system accuracy through testing with representative fitness and nutrition claims across the knowledge base domains.
 
 ### 1.4 Scope
 
@@ -145,7 +145,7 @@ Features explicitly excluded from this MVP include: real-time monitoring or auto
 
 #### 1.4.2 Time Scope
 
-The project's timeline is set for two three-month semesters, totaling eight months from initiation to deployment. This duration will be broken down into six sprints following an Agile methodology: Sprint 1 (Weeks 1-4) for research and dataset curation; Sprint 2 (Weeks 5-8) for NLP pipeline development and claim extraction; Sprint 3 (Weeks 9-12) for ML model training and validation; Sprint 4 (Weeks 13-16) for web interface development; Sprint 5 (Weeks 17-20) for system integration and testing; and Sprint 6 (Weeks 21-24) for final deployment and documentation.
+The project's timeline is set for two three-month semesters, totaling eight months from initiation to deployment. This duration will be broken down into six sprints following an Agile methodology: Sprint 1 (Weeks 1-4) for research and dataset curation; Sprint 2 (Weeks 5-8) for NLP pipeline development and knowledge base ingestion; Sprint 3 (Weeks 9-12) for RAG verification engine development and Groq/Llama 3.1 integration; Sprint 4 (Weeks 13-16) for REST API development and Node.js/FastAPI integration; Sprint 5 (Weeks 17-20) for React frontend and user authentication; and Sprint 6 (Weeks 21-24) for the social media URL pipeline, end-to-end testing, and final deployment.
 
 ### 1.5 Justification
 
@@ -327,6 +327,38 @@ The proposed system adopts a three-tier architecture pattern, separating present
 
 The presentation tier is implemented as a React.js web application that communicates with the backend exclusively through REST API calls. The application tier is divided between a Node.js Express server serving as the primary API gateway and a Python FastAPI microservice responsible for all machine learning operations including embedding generation and vector similarity search. The data tier comprises a PostgreSQL database instance extended with the pgvector module, which stores the full research knowledge base as both text content and 384-dimensional vector embeddings. External service integrations include the Groq API for large language model inference, the OpenAI Whisper API for audio transcription, and the PubMed E-utilities API used during the data collection phase.
 
+*Figure 5 — System Architecture Diagram.*
+
+```mermaid
+graph TD
+    subgraph Presentation
+        A[React.js Frontend]
+    end
+
+    subgraph Application
+        B[Node.js Express API :3000]
+        C[Python FastAPI ML Service :8000]
+    end
+
+    subgraph Data
+        D[(PostgreSQL + pgvector\n37,455 embedded chunks)]
+    end
+
+    subgraph External["External Services"]
+        E[Groq API — Llama 3.1]
+        F[OpenAI Whisper API]
+        G[PubMed E-utilities API]
+    end
+
+    A -->|REST JSON| B
+    B <-->|/search /embed| C
+    C --> D
+    B --> D
+    B -->|LLM verdict synthesis\nand claim extraction| E
+    B -->|Audio transcription| F
+    G -.->|Knowledge base ingestion\n921 papers| D
+```
+
 #### 3.3.2 Process Design
 
 The main processing flow begins with user content submission, followed by text preprocessing and embedding generation. The sentence-transformers model converts the submitted claim into a 384-dimensional semantic vector, which is used to perform a cosine similarity search against the pgvector index in PostgreSQL, returning the most semantically relevant peer-reviewed research segments ranked by similarity score. The Node.js API server assembles the retrieved evidence context and the original claim into a structured prompt, which is submitted to the Llama 3.1 model through the Groq inference API. The model synthesises the evidence into a structured response containing a verdict, confidence level, evidence summary, key supporting points, and source metadata. For URL-based inputs, yt-dlp first downloads the audio track from the TikTok or Instagram video and ffmpeg converts it to a compatible audio format, after which the OpenAI Whisper API transcribes the audio to text. The transcript is then submitted to the Llama 3.1 model for claim extraction, which returns a structured list of all distinct fitness and nutrition assertions identified in the content. Each extracted claim then enters the RAG verification pipeline independently. The complete result is returned to the client as a JSON response for display in the results dashboard.
@@ -335,29 +367,134 @@ The main processing flow begins with user content submission, followed by text p
 
 The database schema will include tables for research papers, extracted claims, user queries, and system feedback. Research papers will store bibliographic information, abstracts, and full text content with appropriate indexing for efficient retrieval. Claims database will maintain structured representations of exercise and nutrition assertions with validity assessments and supporting evidence links, as illustrated in the entity-relationship diagram in Figure 3.
 
+*Figure 3 — Entity-Relationship Diagram.*
+
+```mermaid
+erDiagram
+    RESEARCH_PAPERS {
+        int     id        PK
+        text    title
+        text    content
+        text    embedding "384-dim vector stored via pgvector"
+        jsonb   metadata  "authors, journal, year, DOI, PMID"
+    }
+    USER {
+        uuid      id            PK
+        text      email
+        text      password_hash
+        timestamp created_at
+    }
+    QUERY {
+        uuid      id         PK
+        uuid      user_id    FK
+        text      input_text
+        text      input_type "text or url"
+        timestamp created_at
+    }
+    VERIFICATION_RESULT {
+        uuid  id         PK
+        uuid  query_id   FK
+        text  claim
+        text  verdict    "SUPPORTED, PARTIALLY_SUPPORTED, NOT_SUPPORTED, INSUFFICIENT_EVIDENCE"
+        float confidence
+        text  summary
+        jsonb key_points
+    }
+    CITATION {
+        uuid  id               PK
+        uuid  result_id        FK
+        int   paper_id         FK
+        float similarity_score
+    }
+    FEEDBACK {
+        uuid      id        PK
+        uuid      result_id FK
+        int       rating
+        text      comment
+        timestamp created_at
+    }
+
+    USER              ||--o{ QUERY               : "submits"
+    QUERY             ||--o{ VERIFICATION_RESULT  : "produces"
+    VERIFICATION_RESULT ||--o{ CITATION           : "references"
+    RESEARCH_PAPERS   ||--o{ CITATION             : "cited in"
+    VERIFICATION_RESULT ||--o| FEEDBACK           : "receives"
+```
+
 In the current implementation, the core research knowledge base is realised through the research_papers table, which stores chunk-level text segments from peer-reviewed literature. Each record contains the paper title, the text content of the segment, a 384-dimensional vector embedding stored in a pgvector column, and a JSONB metadata field containing bibliographic information including authors, journal name, publication year, digital object identifier, PubMed identifier, and paper type. The pgvector IVFFlat index on the embedding column enables sub-second cosine similarity queries across all 37,455 stored segments. The remaining tables in the full schema — including USER, QUERY, AUDIO_FILE, EXTRACTED_CLAIM, CLAIM_CATEGORY, VERIFICATION_RESULT, CITATION, and FEEDBACK — are planned for implementation during the web interface and user account management development sprint.
 
 #### 3.3.4 User Interface Designs
 
-*(Figure 4.)*
+*(Figure 4 — Home / Claim Input Page: URL input field and free-text claim entry form with medical disclaimer. Pending React frontend development, Sprint 5.)*
 
-*(Figure 6.)*
+*(Figure 6 — Single Claim Results Page: verdict card displaying SUPPORTED / PARTIALLY SUPPORTED / NOT SUPPORTED / INSUFFICIENT EVIDENCE label, confidence level, evidence summary, key points, and source citations. Pending React frontend development, Sprint 5.)*
 
-*(Figure 7.)*
+*(Figure 7 — Multi-Claim Results Page: per-claim verdict cards generated from a social media URL analysis, showing transcript summary and individual claim breakdowns. Pending React frontend development, Sprint 5.)*
 
-*(Figure 8.)*
+*(Figure 8 — Submission History Page: paginated list of a registered user's previous verification requests with quick-view verdict chips. Pending user account development, Sprint 5.)*
 
-*(Figure 9.)*
+*(Figure 9 — Registration and Login Page: email and password form with JWT authentication flow. Pending user account development, Sprint 5.)*
 
 #### 3.3.5 Applications
 
 ##### 3.3.5.1 Use Case Diagram
 
-*(Figure 10.)*
+*Figure 10 — Use Case Diagram.*
+
+```mermaid
+flowchart TD
+    GU((Guest User))
+    RU((Registered User))
+
+    subgraph FitCheck["FitCheck System"]
+        UC1[Submit text claim]
+        UC2[Paste social media URL]
+        UC3[View verification result]
+        UC4[View submission history]
+        UC5[Register / Login]
+        UC6[Submit feedback on result]
+    end
+
+    GU  --> UC1
+    GU  --> UC2
+    GU  --> UC3
+    RU  --> UC1
+    RU  --> UC2
+    RU  --> UC3
+    RU  --> UC4
+    RU  --> UC5
+    RU  --> UC6
+```
 
 ##### 3.3.5.2 User Flow Diagram
 
-*(Figure 11.)*
+*Figure 11 — User Flow Diagram.*
+
+```mermaid
+flowchart TD
+    A([User visits FitCheck]) --> B{Input type?}
+
+    B -->|Text claim| C[Enter claim text\nPOST /api/verify]
+    B -->|Social media URL| D[Paste URL\nPOST /api/analyze-url]
+
+    C --> E[Embed claim via sentence-transformers]
+    E --> F[pgvector cosine search → top 5 chunks]
+    F --> G[Llama 3.1 synthesises verdict]
+    G --> H[Single-claim result]
+
+    D --> I[yt-dlp downloads audio]
+    I --> J[Whisper transcribes to text]
+    J --> K[Llama 3.1 extracts claims JSON array]
+    K --> L[Per-claim RAG pipeline in parallel]
+    L --> M[Multi-claim result set]
+
+    H --> N[Results dashboard]
+    M --> N
+
+    N --> O{Registered user?}
+    O -->|Yes| P[Saved to submission history]
+    O -->|No| Q[Result displayed — not saved]
+```
 
 #### 3.3.6 Technology
 
@@ -418,7 +555,32 @@ The project requires standard computing hardware meeting a minimum specification
 
 ### 3.6 Project Gantt Chart
 
-*(Figure 12 — Gantt chart spanning December 2025 through March 2026.)*
+*Figure 12 — Project Gantt Chart.*
+
+```mermaid
+gantt
+    title FitCheck Development Schedule
+    dateFormat YYYY-MM-DD
+
+    section Research
+    Data Curation Phase 1            :done, 2025-12-01, 2025-12-10
+    Data Curation Phase 2            :done, 2025-12-11, 2026-01-15
+
+    section Backend
+    Database and Schema Setup        :done, 2026-01-16, 2026-01-25
+    NLP Pipeline and KB Ingestion    :done, 2026-01-26, 2026-02-05
+    RAG Verification Engine          :done, 2026-02-06, 2026-02-15
+    REST API Development             :done, 2026-02-16, 2026-02-26
+    Social Media URL Pipeline        :done, 2026-02-26, 2026-03-10
+
+    section Frontend
+    React Frontend Setup             :2026-02-21, 2026-03-02
+    Results and User Features        :2026-03-03, 2026-03-10
+
+    section Testing and Deployment
+    User Testing and Bug Fixes       :2026-03-11, 2026-03-14
+    Final Deployment and Docs        :2026-03-15, 2026-03-18
+```
 
 ---
 
