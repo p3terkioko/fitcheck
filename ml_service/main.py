@@ -14,6 +14,7 @@ from datetime import datetime
 import numpy as np
 import psycopg2
 import psycopg2.extras
+import psycopg2.pool
 from psycopg2.errors import Error as PostgreSQLError
 from sentence_transformers import SentenceTransformer
 from fastapi import FastAPI, HTTPException
@@ -23,14 +24,17 @@ from dotenv import load_dotenv
 import uvicorn
 
 # Load environment variables
-load_dotenv('../.env')
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_PROJECT = os.path.dirname(_HERE)
+load_dotenv(os.path.join(_PROJECT, '.env'))
 
 # Setup logging
+os.makedirs(os.path.join(_PROJECT, 'logs'), exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('../logs/ml_service.log'),
+        logging.FileHandler(os.path.join(_PROJECT, 'logs', 'ml_service.log')),
         logging.StreamHandler()
     ]
 )
@@ -53,6 +57,7 @@ app.add_middleware(
 
 # Global variables
 embedding_model: Optional[SentenceTransformer] = None
+db_pool: Optional[psycopg2.pool.ThreadedConnectionPool] = None
 
 # Request/Response models
 class SearchRequest(BaseModel):
@@ -102,35 +107,44 @@ class DatabaseManager:
             raise ValueError(f"Missing required environment variables: {missing_vars}")
         
     def get_connection(self):
-        """Get PostgreSQL connection."""
-        return psycopg2.connect(**self.connection_params)
-    
+        """Get a connection from the pool."""
+        if db_pool is None:
+            raise RuntimeError("Connection pool not initialized")
+        return db_pool.getconn()
+
+    def release_connection(self, conn):
+        """Return a connection to the pool."""
+        if db_pool is not None and conn is not None:
+            db_pool.putconn(conn)
+
     def test_connection(self) -> bool:
-        """Test database connection."""
+        """Test database connectivity using the pool."""
+        conn = None
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT 1")
             cursor.close()
-            conn.close()
             return True
         except Exception as e:
             logger.error(f"Database connection failed: {e}")
             return False
-    
-    def semantic_search(self, query_embedding: np.ndarray, max_results: int = 5, 
+        finally:
+            self.release_connection(conn)
+
+    def semantic_search(self, query_embedding: np.ndarray, max_results: int = 5,
                        similarity_threshold: float = 0.5) -> List[Dict[str, Any]]:
         """Perform semantic search using cosine similarity with pgvector."""
         conn = self.get_connection()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        
+
         try:
             # Convert numpy array to list for pgvector
             embedding_vector = query_embedding.tolist()
-            
+
             # SQL query for cosine similarity search
             query = """
-                SELECT 
+                SELECT
                     id,
                     title,
                     abstract,
@@ -145,18 +159,18 @@ class DatabaseManager:
                 ORDER BY similarity_score DESC
                 LIMIT %s
             """
-            
+
             cursor.execute(query, (embedding_vector, embedding_vector, similarity_threshold, max_results))
             results = cursor.fetchall()
-            
+
             return [dict(row) for row in results]
-            
+
         except PostgreSQLError as e:
             logger.error(f"Semantic search failed: {e}")
             raise HTTPException(status_code=500, detail=f"Database search error: {str(e)}")
         finally:
             cursor.close()
-            conn.close()
+            self.release_connection(conn)
 
 # Initialize database manager
 db_manager = DatabaseManager()
@@ -164,17 +178,28 @@ db_manager = DatabaseManager()
 @app.on_event("startup")
 async def startup_event():
     """Initialize the ML service on startup."""
-    global embedding_model
-    
+    global embedding_model, db_pool
+
     logger.info("🚀 Starting FitCheck ML Service...")
-    
-    # Test database connection
-    if not db_manager.test_connection():
-        logger.error("❌ Database connection failed!")
+
+    # Verify DB is reachable before creating the pool
+    try:
+        test_conn = psycopg2.connect(**db_manager.connection_params)
+        test_conn.close()
+    except Exception as e:
+        logger.error(f"❌ Database connection failed: {e}")
         raise RuntimeError("Database connection failed")
-    
+
     logger.info("✅ Database connection successful")
-    
+
+    # Initialize connection pool
+    db_pool = psycopg2.pool.ThreadedConnectionPool(
+        minconn=2,
+        maxconn=10,
+        **db_manager.connection_params
+    )
+    logger.info("✅ Connection pool initialized (min=2, max=10)")
+
     # Load embedding model
     try:
         model_name = os.getenv('EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2')
@@ -184,7 +209,7 @@ async def startup_event():
     except Exception as e:
         logger.error(f"❌ Failed to load embedding model: {e}")
         raise RuntimeError(f"Model loading failed: {e}")
-    
+
     logger.info("🎉 FitCheck ML Service ready!")
 
 @app.get("/health", response_model=HealthResponse)
@@ -193,7 +218,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         service="FitCheck ML Service",
-        database_connected=db_manager.test_connection(),
+        database_connected=db_pool is not None,
         model_loaded=embedding_model is not None,
         timestamp=datetime.now().isoformat()
     )
@@ -258,13 +283,15 @@ async def semantic_search(request: SearchRequest):
 @app.get("/stats")
 async def get_database_stats():
     """Get database statistics."""
+    conn = None
     try:
         conn = db_manager.get_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute("SELECT * FROM research_papers_stats")
         result = cursor.fetchone()
-        
+        cursor.close()
+
         if result:
             stats = {
                 'total_chunks': result[0],
@@ -275,15 +302,14 @@ async def get_database_stats():
             }
         else:
             stats = {'total_chunks': 0, 'unique_papers': 0, 'avg_chunk_length': 0}
-        
-        cursor.close()
-        conn.close()
-        
+
         return stats
-        
+
     except Exception as e:
         logger.error(f"❌ Failed to get stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db_manager.release_connection(conn)
 
 if __name__ == "__main__":
     port = int(os.getenv('PYTHON_PORT', 8000))

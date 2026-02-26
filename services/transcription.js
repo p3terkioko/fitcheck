@@ -18,6 +18,12 @@ const os = require('os');
 const { promisify } = require('util');
 const OpenAI = require('openai');
 
+// Node 18 doesn't expose File as a global — polyfill for OpenAI SDK v6+
+if (typeof globalThis.File === 'undefined') {
+    const { File } = require('node:buffer');
+    globalThis.File = File;
+}
+
 const execFileAsync = promisify(execFile);
 
 // ---------------------------------------------------------------------------
