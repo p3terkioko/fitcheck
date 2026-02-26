@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>FitCheck — Progress Update Milestone 2</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #111;
+    font-family: Arial, Helvetica, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Slide shell ── */
+  .slide {
+    width: 1280px;
+    height: 720px;
+    background: #ffffff;
+    position: relative;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* Teal bottom bar */
+  .bar::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 14px;
+    background: #00B5BD;
+  }
+
+  /* Slide label — monospace top-centre */
+  .label {
+    position: absolute;
+    top: 32px;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    font-size: 18px;
+    color: #111;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Statement text ── */
+  .statement {
+    font-size: 36px;
+    line-height: 1.5;
+    text-align: center;
+    padding: 40px 90px;
+    max-width: 1160px;
+    color: #111;
+  }
+
+  /* ── Table wrapper ── */
+  .tbl-wrap { width: 88%; margin-top: 16px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 17px; color: #111; }
+
+  thead tr th {
+    background: #00B5BD;
+    color: #fff;
+    font-weight: bold;
+    padding: 13px 16px;
+    text-align: left;
+  }
+
+  tbody tr td {
+    padding: 11px 16px;
+    border: 1px solid #ddd;
+    vertical-align: top;
+    line-height: 1.45;
+  }
+
+  tbody tr:nth-child(even) td { background: #f6f6f6; }
+
+  .done    { color: #16a34a; font-weight: bold; }
+  .ahead   { color: #0369a1; font-weight: bold; }
+  .pending { color: #9ca3af; }
+
+  /* ── Title slide ── */
+  .title-main {
+    font-size: 60px;
+    font-weight: bold;
+    text-align: center;
+    line-height: 1.2;
+    color: #111;
+    padding: 0 80px;
+    margin-bottom: 18px;
+  }
+  .title-sub  { font-size: 26px; color: #444; margin-bottom: 30px; }
+  .title-name { font-size: 22px; color: #666; }
+
+  /* ── Pipeline flow ── */
+  .pipeline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    margin-top: 20px;
+  }
+
+  .step { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  .step-box {
+    background: #00B5BD;
+    color: white;
+    font-weight: bold;
+    font-size: 15px;
+    padding: 16px 16px;
+    text-align: center;
+    min-width: 138px;
+    line-height: 1.35;
+  }
+
+  .step-sub {
+    font-size: 13px;
+    color: #555;
+    text-align: center;
+    max-width: 138px;
+    line-height: 1.3;
+  }
+
+  .arrow {
+    font-size: 30px;
+    color: #00B5BD;
+    margin: 0 4px;
+    padding-bottom: 26px;
+    align-self: center;
+  }
+
+  /* ── Number cards ── */
+  .numbers { display: flex; gap: 56px; margin-top: 10px; }
+
+  .num-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .num-big {
+    font-size: 72px;
+    font-weight: bold;
+    color: #00B5BD;
+    line-height: 1;
+  }
+
+  .num-label {
+    font-size: 17px;
+    color: #444;
+    text-align: center;
+    max-width: 200px;
+    line-height: 1.35;
+  }
+
+  /* ── Bullet list ── */
+  .blist {
+    font-size: 28px;
+    line-height: 1.9;
+    list-style: disc;
+    padding-left: 40px;
+    color: #111;
+    margin-top: 10px;
+  }
+
+  /* ── Navigation ── */
+  #nav {
+    position: fixed;
+    bottom: 18px;
+    display: flex;
+    gap: 10px;
+    z-index: 100;
+  }
+
+  #nav button {
+    background: #00B5BD;
+    color: white;
+    border: none;
+    padding: 10px 26px;
+    font-size: 15px;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+
+  #nav button:hover { background: #009aa1; }
+
+  #counter {
+    position: fixed;
+    bottom: 22px;
+    right: 30px;
+    color: #aaa;
+    font-size: 14px;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ SLIDE 1 — Title ═══════════════════════════ -->
+<div class="slide bar active" id="s1">
+  <div class="title-main">Fitness Misinformation Detection System</div>
+  <div class="title-sub">Progress Update &nbsp;·&nbsp; Milestone 2</div>
+  <div class="title-name">Peter Kioko &nbsp;·&nbsp; P15/144253/2022</div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 2 — The Problem ════════════════════ -->
+<div class="slide" id="s2">
+  <div class="label">The Problem</div>
+  <p class="statement">
+    <b>Fitness and nutrition content</b> on TikTok and Instagram
+    reaches millions daily. No automated system exists to verify whether
+    the claims being made are <b>supported by peer-reviewed science</b>.
+  </p>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 3 — The Solution ══════════════════ -->
+<div class="slide" id="s3">
+  <div class="label">The Solution</div>
+  <p class="statement">
+    A user pastes a <b>social media URL</b>. The system extracts the audio,
+    transcribes it, identifies every <b>verifiable fitness claim</b>,
+    and checks each one against <b>921 peer-reviewed papers</b>
+    — returning a verdict with confidence and citations.
+  </p>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 4 — Pipeline ══════════════════════ -->
+<div class="slide" id="s4">
+  <div class="label">How It Works</div>
+  <div class="pipeline">
+
+    <div class="step">
+      <div class="step-box">Social Media<br>URL</div>
+      <div class="step-sub">TikTok · Instagram · YouTube</div>
+    </div>
+    <div class="arrow">→</div>
+
+    <div class="step">
+      <div class="step-box">Audio<br>Extraction</div>
+      <div class="step-sub">yt-dlp + ffmpeg</div>
+    </div>
+    <div class="arrow">→</div>
+
+    <div class="step">
+      <div class="step-box">Speech-to-Text<br>Transcription</div>
+      <div class="step-sub">OpenAI Whisper</div>
+    </div>
+    <div class="arrow">→</div>
+
+    <div class="step">
+      <div class="step-box">Claim<br>Extraction</div>
+      <div class="step-sub">Llama 3.1 → JSON array of claims</div>
+    </div>
+    <div class="arrow">→</div>
+
+    <div class="step">
+      <div class="step-box">RAG<br>Verification</div>
+      <div class="step-sub">pgvector cosine search + Llama 3.1 synthesis</div>
+    </div>
+    <div class="arrow">→</div>
+
+    <div class="step">
+      <div class="step-box">Verdict +<br>Citations</div>
+      <div class="step-sub">SUPPORTED · PARTIALLY · NOT SUPPORTED · INSUFFICIENT</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 5 — Progress ══════════════════════ -->
+<div class="slide" id="s5">
+  <div class="label">Progress Against Schedule</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Task</th><th>Planned End</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Research &amp; Data Curation Phase 1</td>
+          <td>Dec 10, 2025</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+        <tr>
+          <td>Research &amp; Data Curation Phase 2 — 921 papers</td>
+          <td>Jan 15, 2026</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+        <tr>
+          <td>Database &amp; Backend Setup (PostgreSQL + pgvector)</td>
+          <td>Jan 25, 2026</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+        <tr>
+          <td>NLP Pipeline &amp; Knowledge Base Ingestion (37,455 chunks)</td>
+          <td>Feb 05, 2026</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+        <tr>
+          <td>RAG Verification Engine &amp; Groq/Llama 3.1 Integration</td>
+          <td>Feb 15, 2026</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+        <tr>
+          <td>REST API Development — Node.js + FastAPI</td>
+          <td>Feb 26, 2026</td>
+          <td class="done">✅ Complete</td>
+        </tr>
+        <tr>
+          <td>Social Media URL Pipeline (yt-dlp + Whisper + Claim Extraction)</td>
+          <td>Mar 10, 2026</td>
+          <td class="ahead">✅ Complete — 2 weeks ahead of schedule</td>
+        </tr>
+        <tr>
+          <td>React Frontend &amp; User Authentication</td>
+          <td>Mar 10, 2026</td>
+          <td class="pending">⏳ Upcoming</td>
+        </tr>
+        <tr>
+          <td>User Testing, Deployment &amp; Documentation</td>
+          <td>Mar 18, 2026</td>
+          <td class="pending">⏳ Upcoming</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 6 — What's Built ══════════════════ -->
+<div class="slide" id="s6">
+  <div class="label">System Development — What Has Been Built</div>
+  <div class="numbers">
+    <div class="num-card">
+      <div class="num-big">921</div>
+      <div class="num-label">peer-reviewed papers indexed</div>
+    </div>
+    <div class="num-card">
+      <div class="num-big">37,455</div>
+      <div class="num-label">text chunks with vector embeddings</div>
+    </div>
+    <div class="num-card">
+      <div class="num-big">6</div>
+      <div class="num-label">live REST API endpoints</div>
+    </div>
+    <div class="num-card">
+      <div class="num-big">4</div>
+      <div class="num-label">verdict outcomes with confidence and citations</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 7 — Milestone 1 Responses ════════ -->
+<div class="slide" id="s7">
+  <div class="label">Response to Milestone 1 Feedback</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Issue Raised</th><th>Response / Action Taken</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><i>[ Fill in issue 1 from panel feedback ]</i></td>
+          <td><i>[ Your response ]</i></td>
+        </tr>
+        <tr>
+          <td><i>[ Fill in issue 2 from panel feedback ]</i></td>
+          <td><i>[ Your response ]</i></td>
+        </tr>
+        <tr>
+          <td><i>[ Fill in issue 3 from panel feedback ]</i></td>
+          <td><i>[ Your response ]</i></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 8 — Literature Review ════════════ -->
+<div class="slide" id="s8">
+  <div class="label">Literature Review</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Theme</th><th>Key Findings</th><th>Sources</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Misinformation Growth</b></td>
+          <td>Exponential increase in health misinfo post-COVID; <b>88% of Kenyans</b> encounter online misinformation</td>
+          <td>Yeung et al. (2022); Wasserman &amp; Madrid-Morales (2019)</td>
+        </tr>
+        <tr>
+          <td><b>Fitness-Specific Gaps</b></td>
+          <td>Exercise misinfo mixes <b>scientific jargon with unproven claims</b>; only <b>31%</b> of nutrition websites provide evidence-based content</td>
+          <td>Marocolo et al. (2021); Denniss et al. (2023)</td>
+        </tr>
+        <tr>
+          <td><b>Detection Limitations</b></td>
+          <td>Existing systems focus on <b>political/medical content</b>; 82–85% accuracy but <b>lack fitness domain specialisation</b></td>
+          <td>Wang et al. (2020); Schlicht et al. (2024)</td>
+        </tr>
+        <tr>
+          <td><b>Kenyan Context</b></td>
+          <td>Rapid social media adoption <b>outpaces digital literacy</b>; cultural factors influence credibility assessment</td>
+          <td>Tully (2022); Wasserman &amp; Madrid-Morales (2019)</td>
+        </tr>
+        <tr>
+          <td><b>RAG &amp; LLMs for Fact Verification</b></td>
+          <td><b>Retrieval-Augmented Generation</b> reduces hallucination and improves factual grounding; sentence embeddings enable <b>semantic similarity search</b> at scale</td>
+          <td>Lewis et al. (2020); Reimers &amp; Gurevych (2019)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 9 — Similar Systems ══════════════ -->
+<div class="slide" id="s9">
+  <div class="label">Literature Review — Similar Systems</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>System</th><th>Approach</th><th>Limitation Relative to This Work</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>ClaimBuster</b><br><small style="color:#777">Hassan et al., 2017</small></td>
+          <td>Automated claim detection and routing for political fact-checking</td>
+          <td>Text-only; no fitness domain; no audio or video input</td>
+        </tr>
+        <tr>
+          <td><b>Full Fact AI</b><br><small style="color:#777">Babakar &amp; Moy, 2016</small></td>
+          <td>NLP surfaces checkable claims in news; semi-automated verdict generation</td>
+          <td>General news focus; manual verification step required; no RAG retrieval</td>
+        </tr>
+        <tr>
+          <td><b>COVID-Twitter-BERT</b><br><small style="color:#777">Müller et al., 2020</small></td>
+          <td>BERT fine-tuned on COVID tweets for binary misinformation classification</td>
+          <td>Single-domain; binary output only; no evidence retrieval or citations</td>
+        </tr>
+        <tr>
+          <td><b>HealthMap</b><br><small style="color:#777">Brownstein et al., 2008</small></td>
+          <td>Real-time disease surveillance from online sources using NLP classification</td>
+          <td>Surveillance only; does not verify individual claims or produce verdicts</td>
+        </tr>
+        <tr>
+          <td><b>Google Fact Check Tools</b><br><small style="color:#777">Google, 2016</small></td>
+          <td>Aggregates human-authored fact checks; surfaces them in search results</td>
+          <td>Relies entirely on human fact-checkers; no automation; no fitness coverage</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 10 — Technical Literature ════════ -->
+<div class="slide" id="s10">
+  <div class="label">Literature Review — Technical Approaches</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Approach</th><th>Key Finding</th><th>Application in This System</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Retrieval-Augmented Generation</b><br><small style="color:#777">Lewis et al., 2020 — Facebook AI</small></td>
+          <td>RAG grounds LLM responses in retrieved evidence, reducing hallucination on knowledge-intensive tasks</td>
+          <td>Core verification engine — top-5 paper chunks retrieved per claim before synthesis</td>
+        </tr>
+        <tr>
+          <td><b>Sentence Embeddings (SBERT)</b><br><small style="color:#777">Reimers &amp; Gurevych, 2019</small></td>
+          <td>Siamese BERT networks produce 384-dimensional semantic vectors enabling fast cosine similarity search</td>
+          <td>all-MiniLM-L6-v2 embeds all 37,455 chunks; pgvector performs claim similarity retrieval</td>
+        </tr>
+        <tr>
+          <td><b>Automatic Speech Recognition</b><br><small style="color:#777">Radford et al., 2022 — OpenAI Whisper</small></td>
+          <td>Weak supervision on 680,000 hours of audio yields robust multilingual transcription at scale</td>
+          <td>Whisper API transcribes audio extracted from social media URLs before claim extraction</td>
+        </tr>
+        <tr>
+          <td><b>Instruction-Tuned LLMs</b><br><small style="color:#777">Touvron et al., 2023 — Llama 2/3</small></td>
+          <td>Instruction-tuned models reliably produce structured JSON outputs for information extraction</td>
+          <td>Llama 3.1 extracts verifiable fitness claims as a JSON array from raw transcripts</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 11 — What Remains ════════════════ -->
+<div class="slide" id="s11">
+  <div class="label">What Remains</div>
+  <ul class="blist">
+    <li><b>React frontend</b> — input form, per-claim verdict cards, results display</li>
+    <li><b>User accounts</b> — registration, login, submission history</li>
+    <li><b>User testing</b> with target demographic</li>
+    <li><b>Final deployment</b> and project documentation</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════ SLIDE 12 — Demo ═════════════════════════ -->
+<div class="slide bar" id="s12">
+  <p class="title-main" style="font-size:86px; margin-bottom:0;">Demo</p>
+</div>
+
+<!-- ════════════════════════════ Navigation ═══════════════════════════════ -->
+<div id="nav">
+  <button onclick="prev()">← Prev</button>
+  <button onclick="next()">Next →</button>
+</div>
+<div id="counter"></div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+
+  function show(n) {
+    slides[current].classList.remove('active');
+    current = (n + slides.length) % slides.length;
+    slides[current].classList.add('active');
+    document.getElementById('counter').textContent =
+      (current + 1) + ' / ' + slides.length;
+  }
+
+  function next() { show(current + 1); }
+  function prev() { show(current - 1); }
+
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); next(); }
+    if (['ArrowLeft', 'ArrowUp'       ].includes(e.key)) { e.preventDefault(); prev(); }
+  });
+
+  show(0);
+</script>
+</body>
+</html>
