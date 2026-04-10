@@ -3,7 +3,7 @@ name: Deploy to DigitalOcean
 on:
   push:
     branches: [main]
-
+# jn
 jobs:
   deploy:
     runs-on: self-hosted
