@@ -3,7 +3,7 @@ name: Deploy to DigitalOcean
 on:
   push:
     branches: [main]
-# jn
+# jnjdn
 jobs:
   deploy:
     runs-on: self-hosted
@@ -56,7 +56,7 @@ jobs:
           pm2 delete fitcheck-node 2>/dev/null || true
           pm2 delete fitcheck-ml 2>/dev/null || true
           pm2 start server.js --name fitcheck-node
-          ./start-ml.sh --name fitcheck-ml
+          pm2 start ./start-ml.sh --name fitcheck-ml
           pm2 save
 
       - name: Reload nginx
