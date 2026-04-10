@@ -13,8 +13,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Node dependencies
+      - name: Install Node dependencies (backend)
         run: npm ci --omit=dev
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+          cd ..
 
       - name: Set up Python venv
         run: |
@@ -39,11 +46,18 @@ jobs:
           ML_SERVICE_URL=http://localhost:8000
           EOF
 
+      - name: Deploy frontend
+        run: |
+          mkdir -p /home/deploy/fitcheck-frontend
+          cp -r frontend/dist/* /home/deploy/fitcheck-frontend/
+
       - name: Restart services with PM2
         run: |
           pm2 delete fitcheck-node 2>/dev/null || true
           pm2 delete fitcheck-ml 2>/dev/null || true
           pm2 start server.js --name fitcheck-node
-          pm2 start "venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000" \
-            --name fitcheck-ml --cwd ml_service
+          ./start-ml.sh --name fitcheck-ml
           pm2 save
+
+      - name: Reload nginx
+        run: sudo systemctl reload nginx
