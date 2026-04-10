@@ -20,6 +20,7 @@ const { authenticateToken, optionalAuth }
                  = require('./middleware/auth');
 
 const app        = express();
+app.set('trust proxy', 1);  // Trust X-Forwarded-For from nginx reverse proxy
 const PORT       = process.env.NODE_PORT || 3000;
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL
     || `http://localhost:${process.env.PYTHON_PORT || 8000}`;
