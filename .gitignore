@@ -123,3 +123,5 @@ frontend_response_example.json
 *.temp
 *.bak
 *.backup
+
+.claude/

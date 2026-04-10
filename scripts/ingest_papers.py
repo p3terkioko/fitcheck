@@ -36,6 +36,37 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv('../.env')
 
+FITNESS_KEYWORDS = [
+    # Exercise & training
+    'exercise', 'workout', 'training', 'physical activity', 'resistance training',
+    'strength training', 'endurance', 'aerobic', 'anaerobic', 'high intensity',
+    'interval training', 'hiit', 'cardio', 'cardiovascular', 'weightlifting',
+    'running', 'cycling', 'swimming', 'yoga', 'pilates', 'stretching', 'flexibility',
+    # Muscle & body composition
+    'muscle', 'hypertrophy', 'lean mass', 'body composition', 'fat loss',
+    'weight loss', 'obesity', 'bmi', 'body fat', 'muscle mass', 'strength',
+    # Nutrition & supplements
+    'nutrition', 'protein', 'creatine', 'supplement', 'diet', 'calorie',
+    'carbohydrate', 'fat intake', 'amino acid', 'whey', 'caffeine', 'hydration',
+    'micronutrient', 'macronutrient', 'sports nutrition',
+    # Performance & recovery
+    'athletic', 'performance', 'recovery', 'fatigue', 'vo2', 'max oxygen',
+    'lactate', 'sport', 'athlete', 'fitness', 'physical fitness',
+    # Health markers
+    'metabolic', 'metabolism', 'insulin', 'glucose', 'hormones', 'testosterone',
+    'cortisol', 'inflammation', 'injury', 'rehabilitation', 'physical therapy',
+    'musculoskeletal', 'bone density'
+]
+
+
+def is_fitness_relevant(paper: dict) -> bool:
+    """Return True if the paper is relevant to fitness, exercise, or sports nutrition."""
+    text = (
+        paper.get('title', '') + ' ' + paper.get('abstract', '')
+    ).lower()
+    return any(keyword in text for keyword in FITNESS_KEYWORDS)
+
+
 class TextProcessor:
     """Clean and chunk text content for embedding generation."""
     
@@ -167,13 +198,19 @@ class DatabaseManager:
             paper_id = f"{paper_data['title'][:50].replace(' ', '_').lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-                # Prepare metadata
+                # Prepare metadata — include paper-level fields from enrichment if present
                 metadata = {
                     'chunk_index': i,
                     'total_chunks': len(chunks),
                     'word_count': chunk['word_count'],
                     'source_file': paper_data.get('source', 'papers.jsonl'),
-                    'processed_at': datetime.now().isoformat()
+                    'processed_at': datetime.now().isoformat(),
+                    'authors': paper_data.get('authors', []),
+                    'journal': paper_data.get('journal', ''),
+                    'publication_year': paper_data.get('publication_year', ''),
+                    'doi': paper_data.get('doi', ''),
+                    'paper_type': paper_data.get('paper_type', ''),
+                    'pmid': paper_data.get('pmid', None),
                 }
                 
                 # Convert embedding to list for pgvector
@@ -249,8 +286,12 @@ class DatabaseManager:
 
 class PaperIngestionPipeline:
     """Main pipeline for processing research papers."""
-    
-    def __init__(self, data_file: str = "../data/papers.jsonl", batch_size: int = 10):
+
+    def __init__(self, data_file: str = None, batch_size: int = 10):
+        # Prefer enriched file if it exists
+        if data_file is None:
+            enriched = Path('../data/papers_enriched.jsonl')
+            data_file = str(enriched) if enriched.exists() else '../data/papers.jsonl'
         self.data_file = Path(data_file)
         self.batch_size = batch_size
         self.failed_papers = []
@@ -272,7 +313,8 @@ class PaperIngestionPipeline:
         if not self.data_file.exists():
             raise FileNotFoundError(f"Data file not found: {self.data_file}")
         
-        logger.info(f"📖 Loading papers from: {self.data_file}")
+        enriched_marker = " (enriched)" if "enriched" in str(self.data_file) else ""
+        logger.info(f"📖 Loading papers from: {self.data_file}{enriched_marker}")
         
         with open(self.data_file, 'r', encoding='utf-8') as f:
             for line_num, line in enumerate(f, 1):
@@ -337,7 +379,13 @@ class PaperIngestionPipeline:
             logger.error("❌ No papers to process!")
             return
         
-        # Get already processed papers  
+        # Filter out off-topic papers
+        before = len(papers)
+        papers = [p for p in papers if is_fitness_relevant(p)]
+        removed = before - len(papers)
+        logger.info(f"🏋️  Relevance filter: kept {len(papers)} fitness papers, removed {removed} off-topic papers")
+
+        # Get already processed papers
         logger.info("🔍 Checking for already processed papers...")
         processed_titles = self.db_manager.get_processed_papers()
         logger.info(f"📊 Found {len(processed_titles)} already processed papers")

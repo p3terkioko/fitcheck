@@ -159,6 +159,7 @@ while true; do
 
         header "Analysing social media URL"
         echo -e "  ${CYAN}Step 1/3 — Downloading and transcribing audio...${NC}"
+        echo -e "  ${YELLOW}  (this usually takes 30-60 seconds in total — please wait)${NC}"
 
         ESCAPED_URL=$(echo "$URL" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip()))")
         JSON=$(curl -s --max-time 180 -X POST "$BASE/api/analyze-url" \
@@ -166,10 +167,10 @@ while true; do
             -d "{\"url\": $ESCAPED_URL}")
 
         # Check for error
-        if echo "$JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('status')=='success' else 1)" 2>/dev/null; then
+        if echo "$JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d.get('success') else 1)" 2>/dev/null; then
 
-            CLAIMS_N=$(echo "$JSON" | python3 -c "import json,sys; print(json.load(sys.stdin).get('claims_found',0))" 2>/dev/null)
-            TRANSCRIPT=$(echo "$JSON" | python3 -c "import json,sys; t=json.load(sys.stdin).get('transcript',''); print(t[:300]+'...' if len(t)>300 else t)" 2>/dev/null)
+            CLAIMS_N=$(echo "$JSON" | python3 -c "import json,sys; print(json.load(sys.stdin).get('data',{}).get('claims_found',0))" 2>/dev/null)
+            TRANSCRIPT=$(echo "$JSON" | python3 -c "import json,sys; t=json.load(sys.stdin).get('data',{}).get('transcript',''); print(t[:300]+'...' if len(t)>300 else t)" 2>/dev/null)
 
             echo -e "\n  ${GREEN}✅ Transcription complete${NC}"
             echo -e "  ${BOLD}Transcript (preview):${NC}"
@@ -184,7 +185,7 @@ while true; do
 import json, sys
 
 d = json.load(sys.stdin)
-claims = d.get('claims', [])
+claims = d.get('data', {}).get('claims', [])
 
 colours = {
     'SUPPORTED':             '\033[0;32m',
@@ -201,7 +202,7 @@ for c in claims:
     claim   = c.get('claim', '')
     vc      = colours.get(verdict, NC)
 
-    print(f'  {BOLD}Claim {c[\"claim_index\"]+1}:{NC} \"{claim}\"')
+    print(f'  {BOLD}Claim {c[\"claim_index\"]}:{NC} \"{claim}\"')
     print(f'  {BOLD}Verdict:{NC}    {vc}{BOLD}{verdict}{NC}   ({conf} confidence)')
     print(f'  {BOLD}Summary:{NC}')
     words = summary.split()
@@ -226,7 +227,7 @@ for c in claims:
     print()
 "
         else
-            ERR=$(echo "$JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('message', d.get('error','Unknown error')))" 2>/dev/null)
+            ERR=$(echo "$JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('error', d.get('message','Unknown error')))" 2>/dev/null)
             echo -e "\n  ${RED}❌ $ERR${NC}"
         fi
 

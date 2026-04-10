@@ -1,0 +1,49 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Node dependencies
+        run: npm ci --omit=dev
+
+      - name: Set up Python venv
+        run: |
+          python3 -m venv venv
+          venv/bin/pip install -r requirements.txt
+
+      - name: Write .env file
+        run: |
+          cat > .env <<EOF
+          NODE_PORT=3000
+          PYTHON_PORT=8000
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL=llama-3.1-8b-instant
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_JWT_SECRET=${{ secrets.SUPABASE_JWT_SECRET }}
+          PUBMED_API_KEY=${{ secrets.PUBMED_API_KEY }}
+          EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+          ML_SERVICE_URL=http://localhost:8000
+          EOF
+
+      - name: Restart services with PM2
+        run: |
+          pm2 delete fitcheck-node 2>/dev/null || true
+          pm2 delete fitcheck-ml 2>/dev/null || true
+          pm2 start server.js --name fitcheck-node
+          pm2 start "venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000" \
+            --name fitcheck-ml --cwd ml_service
+          pm2 save

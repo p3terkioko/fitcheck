@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-bg text-text-primary font-body antialiased;
+  }
+}
+
+@layer utilities {
+  .font-heading { font-family: 'Satoshi', system-ui, sans-serif; }
+  .font-body    { font-family: 'Satoshi', system-ui, sans-serif; }
+  .font-mono    { font-family: 'Satoshi', ui-monospace, monospace; }
+}

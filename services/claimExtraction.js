@@ -19,14 +19,23 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const EXTRACTION_SYSTEM_PROMPT = `You are a fitness and nutrition claim extraction specialist. Your task is to read a transcript from a fitness-related social media video and extract every distinct, verifiable factual claim about exercise, nutrition, or health.
 
+IMPORTANT CONTEXT: These transcripts come from spoken social media videos (TikTok, Instagram Reels, YouTube Shorts). They contain:
+- Informal speech, filler words ("like", "you know", "basically"), incomplete sentences
+- Repeated ideas phrased differently across the video
+- Implicit claims stated conversationally rather than as formal assertions
+
+Your job is to SYNTHESIZE the underlying factual claims from the spoken content — do not just copy phrases. Reconstruct what the speaker is asserting as clean declarative sentences even if they said it informally.
+
 Rules for extraction:
-- Include only specific, verifiable assertions (e.g. "creatine increases muscle strength", "eating protein within 30 minutes of training builds more muscle").
-- Exclude personal opinions, motivational statements, and anecdotes (e.g. "I feel great doing this", "this worked for me").
+- Include specific, verifiable assertions about exercise, nutrition, supplements, or health physiology (e.g. "creatine increases muscle strength", "eating protein within 30 minutes of training builds more muscle").
+- Synthesize implicit claims: if a creator says "I stopped eating carbs after 6pm and lost 10 pounds", extract "Avoiding carbohydrates after 6pm promotes fat loss".
+- Exclude pure personal anecdotes that cannot be generalised (e.g. "this worked for me personally").
 - Exclude promotional language, calls to action, and social media filler (e.g. "follow for more tips", "link in bio").
 - Exclude vague generalities that cannot be verified against research (e.g. "exercise is good for you").
 - Rephrase each claim as a clean, standalone declarative sentence. Do not copy filler words from the transcript.
 - If the same claim appears multiple times, include it only once.
-- If no verifiable fitness or nutrition claims are found, return an empty array.
+- Aim to find ALL distinct verifiable claims — most fitness videos contain between 3 and 15.
+- If truly no verifiable fitness or nutrition claims are found, return an empty array.
 
 You MUST respond with ONLY a raw JSON array of strings. No preamble, no markdown, no explanation. Start your response with [ and end with ].
 
@@ -99,25 +108,39 @@ async function extractClaims(transcript) {
 
     const model = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 
-    const response = await axios.post(
-        GROQ_API_URL,
-        {
-            model,
-            messages: [
-                { role: 'system', content: EXTRACTION_SYSTEM_PROMPT },
-                { role: 'user',   content: `TRANSCRIPT:\n\n${truncated}` },
-            ],
-            temperature: 0.1,   // low temperature for consistent structured output
-            max_tokens: 1024,
-        },
-        {
-            headers: {
-                'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-                'Content-Type':  'application/json',
-            },
-            timeout: 30_000,
+    let response;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            if (attempt > 0) {
+                const waitMs = attempt * 12000;
+                console.log(`  Claim extraction rate limit — waiting ${waitMs / 1000}s...`);
+                await new Promise(r => setTimeout(r, waitMs));
+            }
+            response = await axios.post(
+                GROQ_API_URL,
+                {
+                    model,
+                    messages: [
+                        { role: 'system', content: EXTRACTION_SYSTEM_PROMPT },
+                        { role: 'user',   content: `TRANSCRIPT:\n\n${truncated}` },
+                    ],
+                    temperature: 0.1,
+                    max_tokens: 1024,
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                        'Content-Type':  'application/json',
+                    },
+                    timeout: 30_000,
+                }
+            );
+            break; // success
+        } catch (err) {
+            if (err.response?.status === 429 && attempt < 2) continue;
+            throw err;
         }
-    );
+    }
 
     const raw = response.data.choices[0].message.content;
     const claims = parseClaimsFromResponse(raw);

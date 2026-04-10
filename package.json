@@ -11,16 +11,20 @@
     "ingest": "cd scripts && ../venv/bin/python ingest_papers.py",
     "enrich": "cd scripts && ../venv/bin/python enrich_papers.py",
     "fetch": "cd scripts && ../venv/bin/python fetch_fitness_papers.py",
-    "setup:db": "psql -U postgres -d fitcheck -f database/schema_postgresql.sql"
+    "setup:db": "PGPASSWORD=fitcheck_pass123 psql -h 127.0.0.1 -U fitcheck_user -d fitcheck_engine -f database/schema_postgresql.sql",
+    "setup:db:additions": "PGPASSWORD=fitcheck_pass123 psql -h 127.0.0.1 -U fitcheck_user -d fitcheck_engine -f database/schema_additions.sql"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.98.0",
     "axios": "^1.6.2",
     "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
     "joi": "^17.11.0",
+    "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
     "openai": "^6.25.0",
