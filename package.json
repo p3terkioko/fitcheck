@@ -11,8 +11,8 @@
     "ingest": "cd scripts && ../venv/bin/python ingest_papers.py",
     "enrich": "cd scripts && ../venv/bin/python enrich_papers.py",
     "fetch": "cd scripts && ../venv/bin/python fetch_fitness_papers.py",
-    "setup:db": "PGPASSWORD=fitcheck_pass123 psql -h 127.0.0.1 -U fitcheck_user -d fitcheck_engine -f database/schema_postgresql.sql",
-    "setup:db:additions": "PGPASSWORD=fitcheck_pass123 psql -h 127.0.0.1 -U fitcheck_user -d fitcheck_engine -f database/schema_additions.sql"
+    "setup:db": "psql $DATABASE_URL -f database/schema_postgresql.sql",
+    "setup:db:additions": "psql $DATABASE_URL -f database/schema_additions.sql"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.98.0",

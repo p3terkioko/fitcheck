@@ -30,13 +30,14 @@ const ML_SERVICE_URL = process.env.ML_SERVICE_URL
 app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL || 'https://fitcheck.works',
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:3000'
-    ];
+    const frontendUrl = process.env.FRONTEND_URL || 'https://fitcheck.works';
+    const allowedOrigins = [frontendUrl];
+
+    // Only allow localhost in development
+    if (process.env.NODE_ENV === 'development') {
+      allowedOrigins.push('http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000');
+    }
+
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -1036,10 +1037,10 @@ app.post('/api/verify/followup', authenticateToken, async (req, res) => {
 });
 
 /**
- * POST /api/search — no auth required
- * Direct ML service passthrough for testing.
+ * POST /api/search — requires authentication
+ * Direct ML service passthrough.
  */
-app.post('/api/search', async (req, res) => {
+app.post('/api/search', authenticateToken, verifyRateLimit, async (req, res) => {
     try {
         const { error, value } = searchSchema.validate(req.body);
         if (error) {
@@ -1102,6 +1103,19 @@ app.use((req, res) => {
         ],
         timestamp: new Date().toISOString()
     });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Global error handlers
+// ─────────────────────────────────────────────────────────────────────────────
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Promise Rejection:', reason);
+    process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    process.exit(1);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
