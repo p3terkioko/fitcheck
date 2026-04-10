@@ -8,6 +8,31 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Short-lived cache for Supabase token validation results.
+// Reduces outbound API calls when the same token hits multiple requests.
+// 60s TTL means a revoked token is honoured within one minute.
+const TOKEN_CACHE_TTL_MS = 60 * 1000;
+const TOKEN_CACHE_MAX_SIZE = 5000;
+const tokenCache = new Map();
+
+function getCachedUser(token) {
+    const entry = tokenCache.get(token);
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+        tokenCache.delete(token);
+        return null;
+    }
+    return entry.supabaseUser;
+}
+
+function setCachedUser(token, supabaseUser) {
+    // Evict the oldest entry when the cache is full
+    if (tokenCache.size >= TOKEN_CACHE_MAX_SIZE) {
+        tokenCache.delete(tokenCache.keys().next().value);
+    }
+    tokenCache.set(token, { supabaseUser, expiresAt: Date.now() + TOKEN_CACHE_TTL_MS });
+}
+
 /**
  * Verifies the Supabase JWT and attaches req.user.
  * Creates user record on first login.
@@ -26,16 +51,22 @@ async function authenticateToken(req, res, next) {
     const token = authHeader.split(' ')[1];
 
     try {
-        // Verify token with Supabase
-        const { data: { user: supabaseUser }, error } =
-            await supabase.auth.getUser(token);
+        // Check cache before making a Supabase network call
+        let supabaseUser = getCachedUser(token);
 
-        if (error || !supabaseUser) {
-            return res.status(401).json({
-                success: false,
-                error: 'Invalid or expired session',
-                code: 'INVALID_TOKEN'
-            });
+        if (!supabaseUser) {
+            const { data: { user }, error } = await supabase.auth.getUser(token);
+
+            if (error || !user) {
+                return res.status(401).json({
+                    success: false,
+                    error: 'Invalid or expired session',
+                    code: 'INVALID_TOKEN'
+                });
+            }
+
+            supabaseUser = user;
+            setCachedUser(token, supabaseUser);
         }
 
         // Look up user in our own database

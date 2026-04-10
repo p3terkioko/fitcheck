@@ -66,6 +66,16 @@ const verifyRateLimit = rateLimit({
     message: { success: false, error: 'Too many requests. Please wait a few minutes before verifying another claim.' }
 });
 
+// Auth-specific rate limit — stricter window to protect Supabase API quota
+// and prevent token-validation spam. Sits on top of the global IP limiter.
+const authRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: 'Too many auth requests. Please try again later.' }
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Validation schemas
 // ─────────────────────────────────────────────────────────────────────────────
@@ -592,7 +602,7 @@ app.get('/api/stats', async (req, res) => {
  * GET /api/auth/me — authenticated
  * Returns the current user's profile.
  */
-app.get('/api/auth/me', authenticateToken, async (req, res) => {
+app.get('/api/auth/me', authRateLimit, authenticateToken, async (req, res) => {
     res.json({
         success: true,
         user: sanitizeUser(req.user)
@@ -603,7 +613,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
  * POST /api/auth/profile — authenticated
  * Saves or updates the user's health profile after onboarding.
  */
-app.post('/api/auth/profile', authenticateToken, async (req, res) => {
+app.post('/api/auth/profile', authRateLimit, authenticateToken, async (req, res) => {
     const { error, value } = profileSchema.validate(req.body);
     if (error) {
         return res.status(400).json({
