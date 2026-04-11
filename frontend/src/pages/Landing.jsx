@@ -187,18 +187,13 @@ function Hero() {
           </a>
         </div>
 
-        {/* Avatar stack + social proof */}
+        {/* Trust line */}
         <div
-          className={`flex items-center justify-center gap-3 transition-all duration-700 delay-[600ms] ${
+          className={`flex items-center justify-center transition-all duration-700 delay-[600ms] ${
             visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
           }`}
         >
-          <div className="flex -space-x-2">
-            {['#00C4A1', '#F59E0B', '#8B5CF6', '#F04E4E'].map((c, i) => (
-              <div key={i} className="h-8 w-8 rounded-full border-2 border-bg" style={{ backgroundColor: c }} />
-            ))}
-          </div>
-          <span className="text-sm text-text-secondary">Trusted by 2,400+ people</span>
+          <span className="text-sm text-text-secondary">Trusted by people who care about the science.</span>
         </div>
       </div>
     </section>
@@ -581,9 +576,9 @@ function Signup() {
         {/* Stats row */}
         <div className="mt-16 flex flex-col items-center gap-8 sm:flex-row sm:justify-center sm:divide-x sm:divide-border">
           {[
-            { stat: '921+', label: 'Papers indexed' },
-            { stat: '<30s', label: 'Avg verdict time' },
+            { stat: '900+', label: 'Peer-reviewed papers' },
             { stat: '4', label: 'Verdict categories' },
+            { stat: 'Seconds', label: 'Fast results' },
           ].map(({ stat, label }, i) => (
             <div key={i} className="px-8 text-center">
               <div className="text-3xl font-bold text-text-primary">{stat}</div>
