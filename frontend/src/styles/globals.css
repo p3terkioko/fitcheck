@@ -9,7 +9,42 @@
 }
 
 @layer utilities {
+  .font-display { font-family: "Wyte Inktrap", system-ui, sans-serif; }
   .font-heading { font-family: 'Satoshi', system-ui, sans-serif; }
   .font-body    { font-family: 'Satoshi', system-ui, sans-serif; }
   .font-mono    { font-family: 'Satoshi', ui-monospace, monospace; }
+}
+
+/* Blob animations */
+@keyframes blob1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+@keyframes blob2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-40px, 40px) scale(0.95); }
+  66% { transform: translate(20px, -30px) scale(1.05); }
+}
+
+@keyframes blob3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(50px, 20px) scale(1.05); }
+  66% { transform: translate(-30px, -40px) scale(0.9); }
+}
+
+/* Marquee animation */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-50% - 8px)); }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

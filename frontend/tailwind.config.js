@@ -27,6 +27,7 @@ export default {
         },
       },
       fontFamily: {
+        display: ['"Wyte Inktrap"', 'system-ui', 'sans-serif'],
         heading: ['Satoshi', 'system-ui', 'sans-serif'],
         body:    ['Satoshi', 'system-ui', 'sans-serif'],
         mono:    ['Satoshi', 'ui-monospace', 'monospace'],

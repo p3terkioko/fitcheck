@@ -133,6 +133,11 @@ const searchSchema = Joi.object({
     similarity_threshold: Joi.number().min(0).max(1).default(0.5)
 });
 
+const followupSchema = Joi.object({
+    verificationId: Joi.string().uuid().required(),
+    question: Joi.string().min(1).max(1000).required()
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // synthesizeResponse
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1049,11 +1054,11 @@ app.get('/api/history/stats', authenticateToken, async (req, res) => {
  * context + fresh RAG search for the question.
  */
 app.post('/api/verify/followup', authenticateToken, async (req, res) => {
-    const { verificationId, question } = req.body;
-
-    if (!verificationId || typeof verificationId !== 'string') {
-        return res.status(400).json({ success: false, error: 'verificationId is required' });
+    const { error, value } = followupSchema.validate(req.body);
+    if (error) {
+        return res.status(400).json({ success: false, error: error.details[0].message });
     }
+    const { verificationId, question } = value;
     if (!question || typeof question !== 'string' || question.trim().length < 5) {
         return res.status(400).json({ success: false, error: 'question must be at least 5 characters' });
     }
