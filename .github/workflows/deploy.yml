@@ -3,22 +3,26 @@ name: Deploy to DigitalOcean
 on:
   push:
     branches: [main]
-# jnjdnm k
+
 jobs:
   deploy:
     runs-on: self-hosted
     environment: production
 
     steps:
-      - name: Checkout code
+      - name: Checkout code to /var/www/fitcheck
         uses: actions/checkout@v4
+        with:
+          path: /var/www/fitcheck
 
       - name: Install Node dependencies (backend)
-        run: npm ci --omit=dev
+        run: |
+          cd /var/www/fitcheck
+          npm ci --omit=dev
 
       - name: Build frontend
         run: |
-          cd frontend
+          cd /var/www/fitcheck/frontend
           cat > .env <<EOF
           VITE_SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
@@ -26,42 +30,27 @@ jobs:
           EOF
           npm ci
           npm run build
-          cd ..
-
-      - name: Set up Python venv
-        run: |
-          python3 -m venv venv
-          venv/bin/pip install -r requirements.txt
-
-      - name: Write .env file
-        run: |
-          cat > .env <<EOF
-          NODE_PORT=3000
-          PYTHON_PORT=8000
-          FRONTEND_URL=https://fitcheck.works
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
-          GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
-          GROQ_MODEL=llama-3.1-8b-instant
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SUPABASE_JWT_SECRET=${{ secrets.SUPABASE_JWT_SECRET }}
-          PUBMED_API_KEY=${{ secrets.PUBMED_API_KEY }}
-          EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-          ML_SERVICE_URL=http://localhost:8000
-          EOF
 
       - name: Deploy frontend
         run: |
           mkdir -p /home/deploy/fitcheck-frontend
-          cp -r frontend/dist/* /home/deploy/fitcheck-frontend/
+          cp -r /var/www/fitcheck/frontend/dist/* /home/deploy/fitcheck-frontend/
 
-      - name: Restart services with PM2
+      - name: Copy .env from server (centralized location)
         run: |
+          cp /etc/fitcheck/.env /var/www/fitcheck/.env
+
+      - name: Restart backend service
+        run: |
+          cd /var/www/fitcheck
           pm2 delete fitcheck-node 2>/dev/null || true
-          pm2 delete fitcheck-ml 2>/dev/null || true
           pm2 start server.js --name fitcheck-node
+          pm2 save
+
+      - name: Restart ML service
+        run: |
+          cd /var/www/fitcheck
+          pm2 delete fitcheck-ml 2>/dev/null || true
           pm2 start ./start-ml.sh --name fitcheck-ml
           pm2 save
 
