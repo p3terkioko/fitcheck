@@ -145,6 +145,37 @@ const searchSchema = Joi.object({
  *                            warnings, consultProfessional }
  * }
  */
+
+/**
+ * Check if a claim is fitness-related using quick LLM classification
+ * Returns { isFitnessClaim: boolean, reason?: string }
+ */
+async function isFitnessRelatedClaim(claim) {
+    try {
+        const GROQ_API_KEY = process.env.GROQ_API_KEY;
+        const response = await axios.post(
+            'https://api.groq.com/openai/v1/chat/completions',
+            {
+                model: 'llama-3.1-8b-instant',
+                messages: [{
+                    role: 'user',
+                    content: `Is this claim about fitness, exercise, nutrition, weight loss, muscle gain, or sports training? Answer with ONLY "yes" or "no": "${claim}"`
+                }],
+                max_tokens: 10,
+                temperature: 0
+            },
+            { headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` } }
+        );
+
+        const answer = response.data.choices[0].message.content.toLowerCase().trim();
+        return { isFitnessClaim: answer.includes('yes') };
+    } catch (err) {
+        console.error('Error checking fitness domain:', err.message);
+        // On error, allow it through (fail open) rather than blocking
+        return { isFitnessClaim: true };
+    }
+}
+
 async function synthesizeResponse(claim, searchResults, userContext = null) {
 
     // ── Empty results ────────────────────────────────────────────────────
@@ -686,6 +717,15 @@ app.post('/api/verify', authenticateToken, verifyRateLimit, async (req, res) => 
     }
 
     const { claim, max_results, similarity_threshold, llm_provider } = value;
+
+    // Check if claim is fitness-related
+    const domainCheck = await isFitnessRelatedClaim(claim);
+    if (!domainCheck.isFitnessClaim) {
+        return res.status(400).json({
+            success: false,
+            error: 'This claim is not related to fitness, exercise, or nutrition. FitCheck only verifies fitness-related claims.'
+        });
+    }
 
     // Build userContext from authenticated user's stored profile
     const userContext = req.user.onboarding_completed ? {
