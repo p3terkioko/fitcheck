@@ -411,8 +411,11 @@ function HowItWorks() {
 
             {/* Right: visual panel (hidden on mobile) */}
             <div className="hidden md:flex items-center justify-center">
-              <div className="flex h-72 w-72 items-center justify-center rounded-2xl border border-border bg-card text-7xl transition-all duration-500">
-                {['📋', '🔬', '✅', '🎯'][activeStep]}
+              <div className="flex h-72 w-72 items-center justify-center rounded-2xl border border-border bg-card transition-all duration-500">
+                {activeStep === 0 && <div className="text-center"><div className="text-5xl font-bold text-accent mb-2">01</div><p className="text-xs text-text-secondary">Claim Input</p></div>}
+                {activeStep === 1 && <div className="text-center"><div className="text-5xl font-bold text-accent mb-2">02</div><p className="text-xs text-text-secondary">Research Scan</p></div>}
+                {activeStep === 2 && <div className="text-center"><div className="text-5xl font-bold text-accent mb-2">03</div><p className="text-xs text-text-secondary">Get Verdict</p></div>}
+                {activeStep === 3 && <div className="text-center"><div className="text-5xl font-bold text-accent mb-2">04</div><p className="text-xs text-text-secondary">Four Categories</p></div>}
               </div>
             </div>
           </div>
@@ -535,7 +538,11 @@ function Signup() {
 
         {done ? (
           <div className="mx-auto max-w-md rounded-2xl border border-[#00C4A1]/30 bg-[#00C4A1]/10 p-8">
-            <div className="mb-3 text-4xl">✓</div>
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#00C4A1] mx-auto">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M4 10l3.5 3.5L16 6" stroke="#00C4A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
             <p className="text-lg font-semibold text-[#00C4A1]">You're in!</p>
             <p className="mt-2 text-sm text-text-secondary">Check your inbox to confirm your account.</p>
           </div>
