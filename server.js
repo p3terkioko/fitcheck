@@ -1,4 +1,6 @@
 require('dotenv').config();
+console.log('DEBUG: DATABASE_URL is', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+console.log('DEBUG: DATABASE_URL =', process.env.DATABASE_URL);
 const express    = require('express');
 const cors       = require('cors');
 const helmet     = require('helmet');
