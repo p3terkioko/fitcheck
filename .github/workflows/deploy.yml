@@ -10,10 +10,14 @@ jobs:
     environment: production
 
     steps:
-      - name: Checkout code to /var/www/fitcheck
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          path: /var/www/fitcheck
+
+      - name: Sync repo to /var/www/fitcheck
+        run: |
+          sudo mkdir -p /var/www/fitcheck
+          sudo rsync -a --delete --exclude node_modules --exclude frontend/node_modules ./ /var/www/fitcheck/
+          sudo chown -R deploy:deploy /var/www/fitcheck
 
       - name: Install Node dependencies (backend)
         run: |
