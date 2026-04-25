@@ -28,7 +28,7 @@ export function Results() {
   // No data
   if (!currentClaims) {
     return (
-      <div className="mx-auto max-w-5xl px-6 py-12">
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
         <EmptyState
           title="No results yet"
           message="Submit a claim or video URL to get started."
@@ -46,7 +46,7 @@ export function Results() {
   const hasPersonalised = currentClaims.some(c => c.result?.profileContext?.hasRelevantContext)
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
       {/* Back + breadcrumb */}
       <Link
         to="/submit"

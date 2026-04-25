@@ -2,7 +2,7 @@ import { getVerdictConfig } from '../../lib/verdictUtils'
 
 export function VerdictBadge({ verdict, size = 'sm' }) {
   const cfg = getVerdictConfig(verdict)
-  const padding = size === 'lg' ? 'px-4 py-1.5 text-xs' : 'px-3 py-1 text-[10px]'
+  const padding = size === 'lg' ? 'px-4 py-1.5 text-xs' : 'px-3 py-1 text-[11px]'
 
   return (
     <span

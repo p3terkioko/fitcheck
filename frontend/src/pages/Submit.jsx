@@ -41,10 +41,10 @@ export function Submit() {
   }
 
   return (
-    <div className="mx-auto flex max-w-5xl items-start gap-8 px-6 py-12">
+    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 lg:flex-row lg:gap-8 lg:px-6 lg:py-12">
       {/* Main content */}
       <div className="flex-1">
-        <h1 className="mb-2 font-heading text-4xl text-text-primary">What have you heard?</h1>
+        <h1 className="mb-2 font-heading text-3xl text-text-primary sm:text-4xl">What have you heard?</h1>
         <p className="mb-6 font-body text-sm text-text-secondary">
           Paste a fitness or nutrition claim to verify it against peer-reviewed research.
         </p>

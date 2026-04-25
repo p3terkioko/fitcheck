@@ -15,7 +15,7 @@ export function ClaimTextarea({ value, onChange }) {
         rows={6}
         placeholder={`e.g. "Creatine causes hair loss" or "You need to eat protein within 30 minutes of training"`}
         className="
-          w-full rounded-xl border border-border bg-card px-5 py-4
+          w-full rounded-xl border border-border bg-card px-5 pt-4 pb-8
           font-mono text-sm text-text-primary placeholder-text-secondary
           resize-none focus:border-accent focus:outline-none transition-colors
         "
