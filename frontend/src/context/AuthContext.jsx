@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { api } from '../lib/api'
 
@@ -8,21 +8,31 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [user, setUser] = useState(null)       // backend user shape
   const [loading, setLoading] = useState(true)
+  // Prevents concurrent fetchBackendUser calls (e.g. getSession + INITIAL_SESSION
+  // event both firing on page load, or rapid auth state changes).
+  const fetchingRef = useRef(false)
 
   async function fetchBackendUser(retried = false) {
+    if (fetchingRef.current) return
+    fetchingRef.current = true
     try {
       const { user: backendUser } = await api.getMe()
       setUser(backendUser)
+      setLoading(false)
     } catch (err) {
-      // AbortError = Web Lock stolen by another tab — retry once after a short delay
+      // AbortError = Web Lock stolen by another tab — retry once after a short delay.
+      // Do NOT call setLoading(false) here; the retry will handle it so loading
+      // stays true while the retry is in flight (fixes premature loading=false).
       if (err.name === 'AbortError' && !retried) {
+        fetchingRef.current = false
         setTimeout(() => fetchBackendUser(true), 800)
         return
       }
       console.error('Failed to fetch backend user:', err.message)
       setUser(null)
-    } finally {
       setLoading(false)
+    } finally {
+      fetchingRef.current = false
     }
   }
 

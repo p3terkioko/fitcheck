@@ -59,6 +59,14 @@ export function ClaimDetail() {
         {backLabel}
       </button>
 
+      {result._fallback && (
+        <div className="mb-6 rounded-xl border border-[#F59E0B]/30 bg-[#F59E0B]/10 px-4 py-3">
+          <p className="font-body text-xs text-[#F59E0B]">
+            AI synthesis was temporarily unavailable. This verdict is based on relevance scores only and does not reflect your health profile.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-8">
         <VerdictHeader result={result} claim={claim} />
         <ReasoningBlock reasoning={result.reasoning} keyPoints={result.keyPoints} />

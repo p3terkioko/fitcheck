@@ -9,13 +9,17 @@ export function FollowUpPanel({ verificationId }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
+  // Ref-based guard prevents a double-send when the user clicks before the
+  // loading state update propagates (React state is async; refs are synchronous).
+  const sendingRef = useRef(false)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   async function handleSend() {
-    if (!input.trim() || loading) return
+    if (!input.trim() || loading || sendingRef.current) return
+    sendingRef.current = true
     const question = input.trim()
     setInput('')
     setLoading(true)
@@ -36,6 +40,7 @@ export function FollowUpPanel({ verificationId }) {
       ))
     } finally {
       setLoading(false)
+      sendingRef.current = false
     }
   }
 

@@ -17,14 +17,18 @@ export function DidYouKnow() {
   const [visible, setVisible] = useState(true)
 
   useEffect(() => {
+    let fadeTimer = null
     const interval = setInterval(() => {
       setVisible(false)
-      setTimeout(() => {
+      fadeTimer = setTimeout(() => {
         setIdx(i => (i + 1) % FACTS.length)
         setVisible(true)
       }, 400)
     }, 6000)
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      if (fadeTimer) clearTimeout(fadeTimer)
+    }
   }, [])
 
   return (

@@ -750,7 +750,7 @@ app.post('/api/verify', authenticateToken, verifyRateLimit, async (req, res) => 
                 error: 'Research search service unavailable. Please try again.'
             });
         }
-        res.status(500).json({ success: false, error: err.message });
+        return res.status(500).json({ success: false, error: err.message });
     }
 });
 
@@ -770,6 +770,18 @@ app.post('/api/analyze-url', authenticateToken, verifyRateLimit, async (req, res
 
     const { url, max_results } = value;
     const pipelineStart = Date.now();
+
+    // Hard deadline slightly under the browser's 120 s abort so we always
+    // send a structured error instead of the client just seeing a timeout.
+    const deadline = setTimeout(() => {
+        if (!res.headersSent) {
+            res.status(504).json({
+                success: false,
+                error: 'Analysis timed out. The video may be too long — try a shorter clip.',
+                timestamp: new Date().toISOString()
+            });
+        }
+    }, 110000);
 
     // Build userContext from authenticated user's profile
     const userContext = req.user.onboarding_completed ? {
@@ -836,7 +848,15 @@ app.post('/api/analyze-url', authenticateToken, verifyRateLimit, async (req, res
 
         // ── Step 2: Extract claims ─────────────────────────────────────────
         const extractStart = Date.now();
-        const claims       = await extractClaims(transcript);
+        let claims = [];
+        try {
+            claims = await extractClaims(transcript);
+        } catch (extractErr) {
+            // Extraction failure (e.g. Groq rate-limit exhausted after retries).
+            // Degrade gracefully — transcript was already fetched/cached, return
+            // it with 0 claims rather than failing the whole request.
+            console.error('Claim extraction failed, continuing with 0 claims:', extractErr.message);
+        }
         const extractMs    = Date.now() - extractStart;
 
         if (claims.length === 0) {
@@ -893,6 +913,7 @@ app.post('/api/analyze-url', authenticateToken, verifyRateLimit, async (req, res
         );
         const verifyMs = Date.now() - verifyStart;
 
+        clearTimeout(deadline);
         res.json({
             success: true,
             data: {
@@ -913,13 +934,16 @@ app.post('/api/analyze-url', authenticateToken, verifyRateLimit, async (req, res
         });
 
     } catch (err) {
+        clearTimeout(deadline);
         console.error('analyze-url error:', err.message);
-        res.status(422).json({
-            success: false,
-            error: err.message,
-            supportedPlatforms: SUPPORTED_DOMAINS,
-            timestamp: new Date().toISOString()
-        });
+        if (!res.headersSent) {
+            return res.status(422).json({
+                success: false,
+                error: err.message,
+                supportedPlatforms: SUPPORTED_DOMAINS,
+                timestamp: new Date().toISOString()
+            });
+        }
     }
 });
 
@@ -1057,7 +1081,7 @@ app.post('/api/verify/followup', authenticateToken, async (req, res) => {
         if (err.code === 'ECONNREFUSED') {
             return res.status(503).json({ success: false, error: 'Research service unavailable. Please try again.' });
         }
-        res.status(500).json({ success: false, error: 'Failed to generate follow-up answer' });
+        return res.status(500).json({ success: false, error: 'Failed to generate follow-up answer' });
     }
 });
 
@@ -1133,12 +1157,14 @@ app.use((req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Global error handlers
 // ─────────────────────────────────────────────────────────────────────────────
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
+    // Log but do not exit — exiting kills every in-flight request for all users.
+    // Individual route handlers are responsible for their own error responses.
     console.error('Unhandled Promise Rejection:', reason);
-    process.exit(1);
 });
 
 process.on('uncaughtException', (err) => {
+    // Synchronous exceptions leave the process in an undefined state — exit is correct here.
     console.error('Uncaught Exception:', err);
     process.exit(1);
 });

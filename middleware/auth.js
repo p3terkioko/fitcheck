@@ -69,25 +69,27 @@ async function authenticateToken(req, res, next) {
             setCachedUser(token, supabaseUser);
         }
 
-        // Look up user in our own database
+        // Upsert user — atomic INSERT … ON CONFLICT prevents a race condition
+        // where two concurrent first-login requests both see 0 rows and both
+        // try to INSERT, causing a unique-constraint violation on supabase_id.
         let result = await pool.query(
-            'SELECT * FROM users WHERE supabase_id = $1',
-            [supabaseUser.id]
+            `INSERT INTO users (supabase_id, email, display_name, avatar_url)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (supabase_id) DO NOTHING
+             RETURNING *`,
+            [
+                supabaseUser.id,
+                supabaseUser.email,
+                supabaseUser.user_metadata?.full_name || null,
+                supabaseUser.user_metadata?.avatar_url || null,
+            ]
         );
 
         if (result.rows.length === 0) {
-            // First login — create user record
+            // Row already existed (conflict); fetch the existing record.
             result = await pool.query(
-                `INSERT INTO users
-                    (supabase_id, email, display_name, avatar_url)
-                 VALUES ($1, $2, $3, $4)
-                 RETURNING *`,
-                [
-                    supabaseUser.id,
-                    supabaseUser.email,
-                    supabaseUser.user_metadata?.full_name || null,
-                    supabaseUser.user_metadata?.avatar_url || null,
-                ]
+                'SELECT * FROM users WHERE supabase_id = $1',
+                [supabaseUser.id]
             );
         }
 
