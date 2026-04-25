@@ -103,7 +103,11 @@ class DatabaseManager:
             'port': os.getenv('DB_PORT', '5432'),
             'database': os.getenv('DB_NAME'),
             'user': os.getenv('DB_USER'),
-            'password': os.getenv('DB_PASSWORD')
+            'password': os.getenv('DB_PASSWORD'),
+            'keepalives': 1,
+            'keepalives_idle': 60,
+            'keepalives_interval': 10,
+            'keepalives_count': 5,
         }
         
         # Validate required environment variables
@@ -113,10 +117,16 @@ class DatabaseManager:
             raise ValueError(f"Missing required environment variables: {missing_vars}")
         
     def get_connection(self):
-        """Get a connection from the pool."""
+        """Get a live connection from the pool, replacing it if dead."""
         if db_pool is None:
             raise RuntimeError("Connection pool not initialized")
-        return db_pool.getconn()
+        conn = db_pool.getconn()
+        try:
+            conn.cursor().execute("SELECT 1")
+        except Exception:
+            db_pool.putconn(conn, close=True)
+            conn = db_pool.getconn()
+        return conn
 
     def release_connection(self, conn):
         """Return a connection to the pool."""
