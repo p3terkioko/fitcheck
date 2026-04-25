@@ -3,8 +3,17 @@ import { supabase } from './supabase'
 const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
 
 async function getToken() {
-  const { data } = await supabase.auth.getSession()
-  return data?.session?.access_token ?? null
+  try {
+    const { data } = await Promise.race([
+      supabase.auth.getSession(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+    ])
+    return data?.session?.access_token ?? null
+  } catch {
+    // Supabase stalled (e.g. token refresh on a slow network) — fail open
+    // so the fetch still goes out; server will 401 if truly unauthenticated.
+    return null
+  }
 }
 
 async function authHeaders() {
@@ -16,11 +25,11 @@ async function authHeaders() {
 }
 
 async function request(method, path, body, timeoutMs = 90000) {
-  const headers = await authHeaders()
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
+    const headers = await authHeaders()
     const res = await fetch(`${BASE}${path}`, {
       method,
       headers,
