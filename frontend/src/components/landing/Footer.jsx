@@ -9,7 +9,6 @@ export function Footer() {
         </p>
         <div className="flex flex-wrap justify-center gap-6 text-sm text-text-secondary">
           <Link to="/" className="transition-colors hover:text-text-primary">About</Link>
-          <Link to="/" className="transition-colors hover:text-text-primary">Pricing</Link>
           <Link to="/" className="transition-colors hover:text-text-primary">Privacy</Link>
           <Link to="/" className="transition-colors hover:text-text-primary">Contact</Link>
           <Link to="/login" className="transition-colors hover:text-text-primary font-medium text-text-primary">

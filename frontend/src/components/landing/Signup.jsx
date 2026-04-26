@@ -33,7 +33,7 @@ export function Signup() {
         </h2>
 
         <p className="mx-auto mb-10 max-w-md text-base text-text-secondary">
-          Start fact-checking fitness claims for free. No credit card required.
+          Start fact-checking fitness claims today.
         </p>
 
         {done ? (
@@ -63,7 +63,7 @@ export function Signup() {
               {loading ? (
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-bg border-t-transparent" />
               ) : (
-                'Create free account'
+                'Create account'
               )}
             </button>
           </form>

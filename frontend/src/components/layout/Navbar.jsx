@@ -70,7 +70,7 @@ export function Navbar({ variant = 'landing' }) {
                     to="/login"
                     className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
                   >
-                    Try FitCheck free
+                    Try FitCheck
                   </Link>
                 </>
               )}
@@ -126,7 +126,7 @@ export function Navbar({ variant = 'landing' }) {
                     to="/login"
                     className="flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-semibold text-bg"
                   >
-                    Try FitCheck free
+                    Try FitCheck
                   </Link>
                 </>
               )}

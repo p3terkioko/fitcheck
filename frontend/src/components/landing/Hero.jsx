@@ -72,7 +72,7 @@ export function Hero() {
             to="/login"
             className="flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
           >
-            Get started free <ArrowRight size={15} />
+            Get started <ArrowRight size={15} />
           </Link>
           <a
             href="#how-it-works"
