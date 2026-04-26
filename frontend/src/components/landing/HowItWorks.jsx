@@ -24,27 +24,54 @@ const HOW_STEPS = [
 ]
 
 export function HowItWorks() {
-  const trackRef = useRef(null)
-  const [activeStep, setActiveStep] = useState(0)
+  const containerRef = useRef(null)
+  const itemRefs = useRef([])
+  const [opacities, setOpacities] = useState([1, 0.2, 0.2, 0.2]) // Initial opacities
+  const [activeVisual, setActiveVisual] = useState(0)
 
   useEffect(() => {
-    // Disable sticky scroll math on mobile
-    const isMobile = window.innerWidth < 768
-    if (isMobile) return
+    const handleScroll = () => {
+      if (!itemRefs.current.length) return
+      
+      const newOpacities = []
+      let newActiveVisual = 0
+      
+      const windowHeight = window.innerHeight
+      const centerLine = windowHeight / 2
 
-    const onScroll = () => {
-      if (!trackRef.current) return
-      const { top, height } = trackRef.current.getBoundingClientRect()
-      const vh = window.innerHeight
-      const p = Math.max(0, Math.min(1, -top / (height - vh)))
-      setActiveStep(Math.min(HOW_STEPS.length - 1, Math.floor(p * HOW_STEPS.length)))
+      itemRefs.current.forEach((el, index) => {
+        if (!el) return
+        
+        const rect = el.getBoundingClientRect()
+        // Calculate distance of the element's center from the viewport's center
+        const elCenter = rect.top + rect.height / 2
+        const distFromCenter = Math.abs(centerLine - elCenter)
+        
+        // Define an activation zone (e.g. within 200px of center)
+        const activationZone = 250
+        
+        if (distFromCenter < activationZone) {
+          // Inside the zone, it approaches opacity 1
+          const intensity = 1 - (distFromCenter / activationZone)
+          newOpacities.push(0.2 + (0.8 * intensity))
+          
+          // Set the visual state to the one most central
+          if (distFromCenter < 100) newActiveVisual = index
+        } else {
+          // Outside the zone
+          newOpacities.push(0.2)
+        }
+      })
+      
+      setOpacities(newOpacities)
+      setActiveVisual(newActiveVisual)
     }
-    
+
     let ticking = false
     const scrollListener = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          onScroll()
+          handleScroll()
           ticking = false
         })
         ticking = true
@@ -52,54 +79,84 @@ export function HowItWorks() {
     }
 
     window.addEventListener('scroll', scrollListener, { passive: true })
+    handleScroll() // initial check
+    
     return () => window.removeEventListener('scroll', scrollListener)
   }, [])
 
   return (
-    <section id="how-it-works" ref={trackRef} className="relative md:h-[400vh]">
-      <div className="md:sticky md:top-0 flex h-auto md:h-[100svh] items-center px-6 py-20 md:py-0">
-        <div className="relative mx-auto w-full max-w-6xl">
-          <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
-            {/* Left: text steps */}
-            <div className="flex flex-col justify-center">
-              <p className="mb-8 text-xs font-semibold uppercase tracking-widest text-accent">How it works</p>
-              
-              {/* On mobile, show all steps at once. On desktop, fade them. */}
-              {HOW_STEPS.map((step, i) => (
-                <div
-                  key={i}
-                  className={`mb-12 md:mb-8 transition-all duration-500 md:${i === activeStep ? 'opacity-100' : 'opacity-25'}`}
-                >
-                  <div className="mb-2 text-xs font-semibold text-accent">{step.num}</div>
-                  <h3 className="mb-3 font-display font-bold text-[clamp(24px,3vw,42px)] text-text-primary">
-                    {step.title}
-                  </h3>
-                  <p className="max-w-md text-base text-text-secondary">{step.body}</p>
-                </div>
-              ))}
-            </div>
+    <section id="how-it-works" ref={containerRef} className="relative py-24 md:py-32">
+      <div className="relative mx-auto w-full max-w-6xl px-6">
+        <p className="mb-16 text-center text-xs font-semibold uppercase tracking-widest text-accent md:text-left">
+          How it works
+        </p>
 
-            {/* Right: visual panel (hidden on mobile) */}
-            <div className="hidden md:flex items-center justify-center">
-              <div className="flex h-72 w-72 items-center justify-center rounded-2xl border border-border bg-card transition-all duration-500 shadow-xl">
-                {activeStep === 0 && <div className="text-center"><div className="text-5xl font-bold text-accent mb-2">01</div><p className="text-xs text-text-secondary uppercase tracking-wider">Claim Input</p></div>}
-                {activeStep === 1 && <div className="text-center"><div className="text-5xl font-bold text-accent mb-2">02</div><p className="text-xs text-text-secondary uppercase tracking-wider">Research Scan</p></div>}
-                {activeStep === 2 && <div className="text-center"><div className="text-5xl font-bold text-accent mb-2">03</div><p className="text-xs text-text-secondary uppercase tracking-wider">Get Verdict</p></div>}
-                {activeStep === 3 && <div className="text-center"><div className="text-5xl font-bold text-accent mb-2">04</div><p className="text-xs text-text-secondary uppercase tracking-wider">Four Categories</p></div>}
-              </div>
-            </div>
-          </div>
-
-          {/* Step indicators (hidden on mobile) */}
-          <div className="absolute right-6 top-1/2 hidden -translate-y-1/2 flex-col gap-2 md:flex">
-            {HOW_STEPS.map((_, i) => (
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-[1fr_400px]">
+          {/* Left: Scroll-driven text steps */}
+          <div className="flex flex-col gap-32 pb-32">
+            {HOW_STEPS.map((step, i) => (
               <div
                 key={i}
-                className={`h-2 w-2 rounded-full transition-all duration-300 ${
-                  i === activeStep ? 'bg-accent scale-125' : 'bg-border'
-                }`}
-              />
+                ref={(el) => (itemRefs.current[i] = el)}
+                className="transition-opacity duration-150 ease-out"
+                style={{ opacity: window.innerWidth < 768 ? 1 : opacities[i] }} // Always 100% on mobile for readability
+              >
+                <div className="mb-4 text-sm font-bold tracking-widest text-accent/80">
+                  {step.num}
+                </div>
+                <h3 className="mb-4 font-display font-bold text-4xl leading-[1.1] text-text-primary md:text-5xl">
+                  {step.title}
+                </h3>
+                <p className="max-w-md text-lg text-text-secondary leading-relaxed">
+                  {step.body}
+                </p>
+              </div>
             ))}
+          </div>
+
+          {/* Right: Sticky visual panel */}
+          <div className="hidden md:block">
+            <div className="sticky top-1/2 -translate-y-1/2 flex aspect-square w-full items-center justify-center rounded-3xl border border-border/50 bg-[#1A1D27]/80 shadow-[0_0_40px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-700">
+              
+              {/* Dynamic visual state based on active step */}
+              {activeVisual === 0 && (
+                <div className="animate-in fade-in zoom-in-95 duration-500 text-center">
+                  <div className="text-7xl font-bold text-accent mb-4 blur-[2px] opacity-20 relative">
+                    <span className="absolute inset-0 blur-none opacity-100 text-accent">01</span>
+                    01
+                  </div>
+                  <p className="text-sm font-medium text-text-secondary uppercase tracking-widest">Input Claim</p>
+                </div>
+              )}
+              {activeVisual === 1 && (
+                <div className="animate-in fade-in zoom-in-95 duration-500 text-center">
+                  <div className="text-7xl font-bold text-accent mb-4 blur-[2px] opacity-20 relative">
+                    <span className="absolute inset-0 blur-none opacity-100 text-accent">02</span>
+                    02
+                  </div>
+                  <p className="text-sm font-medium text-text-secondary uppercase tracking-widest">Search DB</p>
+                </div>
+              )}
+              {activeVisual === 2 && (
+                <div className="animate-in fade-in zoom-in-95 duration-500 text-center">
+                  <div className="text-7xl font-bold text-accent mb-4 blur-[2px] opacity-20 relative">
+                    <span className="absolute inset-0 blur-none opacity-100 text-accent">03</span>
+                    03
+                  </div>
+                  <p className="text-sm font-medium text-text-secondary uppercase tracking-widest">Verdict</p>
+                </div>
+              )}
+              {activeVisual === 3 && (
+                <div className="animate-in fade-in zoom-in-95 duration-500 text-center">
+                  <div className="text-7xl font-bold text-accent mb-4 blur-[2px] opacity-20 relative">
+                    <span className="absolute inset-0 blur-none opacity-100 text-accent">04</span>
+                    04
+                  </div>
+                  <p className="text-sm font-medium text-text-secondary uppercase tracking-widest">Clarity</p>
+                </div>
+              )}
+
+            </div>
           </div>
         </div>
       </div>

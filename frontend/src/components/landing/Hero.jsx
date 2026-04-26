@@ -64,10 +64,19 @@ export function Hero() {
 
         {/* CTA buttons */}
         <div
-          className={`mb-10 flex flex-wrap items-center justify-center gap-4 transition-all duration-700 delay-500 ${
+          className={`relative mb-10 flex flex-wrap items-center justify-center gap-4 transition-all duration-700 delay-500 ${
             visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
           }`}
         >
+          {/* Merlin-style SVG Scribble */}
+          <div className="absolute -top-12 -right-6 hidden sm:block rotate-12 opacity-80">
+            <svg width="80" height="50" viewBox="0 0 100 60" fill="none" className="text-accent stroke-current" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10,40 Q30,10 60,10 T90,30" />
+              <path d="M75,20 L90,30 L80,45" />
+              <text x="15" y="15" fontSize="14" fill="currentColor" stroke="none" className="font-body opacity-90 rotate-[-10deg]">Free</text>
+            </svg>
+          </div>
+
           <Link
             to="/login"
             className="flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
