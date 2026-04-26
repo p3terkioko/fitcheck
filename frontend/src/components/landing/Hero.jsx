@@ -1,56 +1,96 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Play } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 export function Hero() {
-  return (
-    <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-bg px-6 py-24">
-      {/* Ambient teal glow */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.06]"
-        style={{
-          background: 'radial-gradient(ellipse 80% 60% at 50% 40%, #00C4A1, transparent)',
-          animation: 'pulse 8s ease-in-out infinite',
-        }}
-      />
+  const [visible, setVisible] = useState(false)
 
-      <div className="relative z-10 mx-auto max-w-3xl text-center">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-          <span className="font-mono text-xs text-text-secondary">900+ peer-reviewed papers</span>
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 100)
+    return () => clearTimeout(t)
+  }, [])
+
+  return (
+    <section className="relative flex min-h-[100svh] items-center justify-center overflow-hidden px-6 pt-20">
+      <div className="relative z-10 mx-auto max-w-4xl text-center">
+        {/* Live pill */}
+        <div
+          className={`mb-8 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 transition-all duration-700 ${
+            visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00C4A1] opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00C4A1]" />
+          </span>
+          <span className="text-xs text-text-secondary">Now live · fitcheck.works</span>
         </div>
 
-        <h1 className="mb-6 font-heading text-5xl leading-tight text-text-primary md:text-6xl">
-          Does that fitness claim<br />hold up?
+        {/* Headline with staggered lines */}
+        <h1
+          className="mb-8 font-display font-bold text-text-primary text-[clamp(40px,5vw+1rem,96px)] leading-none"
+        >
+          <span
+            className={`block transition-all duration-700 delay-100 ${
+              visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+          >
+            Stop trusting
+          </span>
+          <span
+            className={`block transition-all duration-700 delay-200 ${
+              visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+          >
+            fitness advice
+          </span>
+          <span
+            className={`block transition-all duration-700 delay-300 ${
+              visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+          >
+            <em className="text-accent italic">blindly.</em>
+          </span>
         </h1>
 
-        <p className="mx-auto mb-10 max-w-xl font-body text-lg text-text-secondary">
-          FitCheck cross-references exercise and nutrition claims against peer-reviewed research — in seconds.
+        {/* Subheading */}
+        <p
+          className={`mx-auto mb-10 max-w-xl text-lg text-text-secondary transition-all duration-700 delay-[400ms] ${
+            visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          FitCheck cross-references fitness and nutrition claims against peer-reviewed research and returns a verdict in under 30 seconds.
         </p>
 
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+        {/* CTA buttons */}
+        <div
+          className={`mb-10 flex flex-wrap items-center justify-center gap-4 transition-all duration-700 delay-500 ${
+            visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
           <Link
             to="/login"
-            className="flex items-center gap-2 rounded-lg bg-accent px-7 py-3.5 font-body text-sm font-medium text-bg hover:bg-accent/90 transition-colors"
+            className="flex items-center gap-2 rounded-full bg-accent px-7 py-3.5 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
           >
-            Get Started Free
-            <ArrowRight size={16} />
+            Get started free <ArrowRight size={15} />
           </Link>
           <a
             href="#how-it-works"
-            className="flex items-center gap-2 rounded-lg border border-border px-7 py-3.5 font-body text-sm font-medium text-text-secondary hover:border-accent hover:text-accent transition-colors"
+            className="flex items-center gap-2 rounded-full border border-border px-7 py-3.5 text-sm font-semibold text-text-secondary transition-colors hover:border-accent hover:text-accent"
           >
-            <Play size={14} />
-            See How It Works
+            See how it works
           </a>
         </div>
-      </div>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.04; }
-          50% { opacity: 0.08; }
-        }
-      `}</style>
+        {/* Trust line */}
+        <div
+          className={`flex items-center justify-center transition-all duration-700 delay-[600ms] ${
+            visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}
+        >
+          <span className="text-sm text-text-secondary">Trusted by people who care about the science.</span>
+        </div>
+      </div>
     </section>
   )
 }

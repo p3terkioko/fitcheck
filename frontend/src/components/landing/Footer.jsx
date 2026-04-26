@@ -1,13 +1,21 @@
+import { Link } from 'react-router-dom'
+
 export function Footer() {
   return (
-    <footer className="bg-bg border-t border-border px-6 py-8">
-      <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 text-center">
-        <div className="flex gap-5 font-body text-xs text-text-secondary">
-          <a href="#" className="hover:text-text-primary transition-colors">Terms of Service</a>
-          <a href="#" className="hover:text-text-primary transition-colors">Privacy Policy</a>
-          <a href="#" className="hover:text-text-primary transition-colors">Contact</a>
+    <footer className="border-t border-border px-6 py-8 bg-bg">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 sm:flex-row">
+        <p className="text-sm text-text-secondary">
+          © {new Date().getFullYear()} <span className="text-accent font-semibold">FitCheck</span>
+        </p>
+        <div className="flex flex-wrap justify-center gap-6 text-sm text-text-secondary">
+          <Link to="/" className="transition-colors hover:text-text-primary">About</Link>
+          <Link to="/" className="transition-colors hover:text-text-primary">Pricing</Link>
+          <Link to="/" className="transition-colors hover:text-text-primary">Privacy</Link>
+          <Link to="/" className="transition-colors hover:text-text-primary">Contact</Link>
+          <Link to="/login" className="transition-colors hover:text-text-primary font-medium text-text-primary">
+            Log in
+          </Link>
         </div>
-        <p className="font-body text-xs text-text-secondary">© FitCheck 2025</p>
       </div>
     </footer>
   )

@@ -28,6 +28,8 @@ export function UrlInput({ value, onChange }) {
           <Link size={16} className="text-text-secondary" />
         </div>
         <input
+          id="url-input"
+          aria-label="URL input"
           type="url"
           value={value}
           onChange={e => onChange(e.target.value)}

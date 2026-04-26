@@ -10,6 +10,8 @@ export function ClaimTextarea({ value, onChange }) {
   return (
     <div className="relative">
       <textarea
+        id="claim-text"
+        aria-label="Fitness claim text"
         value={value}
         onChange={e => onChange(e.target.value.slice(0, MAX))}
         rows={6}

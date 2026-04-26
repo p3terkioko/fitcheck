@@ -18,7 +18,7 @@ export default {
         border:   '#2D3350',
         accent:   '#00C4A1',
         'text-primary':   '#F0F2F5',
-        'text-secondary': '#8B92A5',
+        'text-secondary': '#A0A6B6',
         verdict: {
           backed:      '#00C4A1',
           partly:      '#F59E0B',

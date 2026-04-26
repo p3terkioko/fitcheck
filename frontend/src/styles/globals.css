@@ -40,6 +40,10 @@
   100% { transform: translateX(calc(-50% - 8px)); }
 }
 
+.marquee-container {
+  will-change: transform;
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   * {

@@ -1,117 +1,139 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { History, Settings, LogOut, Menu, X, CheckCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { CheckCircle, Menu, X } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { Avatar } from '../ui/Avatar'
 
-export function Navbar() {
-  const { user, signOut } = useAuth()
-  const navigate = useNavigate()
+export function Navbar({ variant = 'landing' }) {
+  const { session } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [avatarOpen, setAvatarOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
 
-  async function handleSignOut() {
-    await signOut()
-    navigate('/')
-  }
+  useEffect(() => {
+    const handler = () => setScrolled(window.scrollY > 10)
+    window.addEventListener('scroll', handler, { passive: true })
+    return () => window.removeEventListener('scroll', handler)
+  }, [])
+
+  // If we're on the landing page, we want it to be transparent at top, then glassmorphism
+  const isLanding = variant === 'landing'
+  const navBgClass = isLanding
+    ? scrolled ? 'border-b border-border bg-[#0F1117]/80 backdrop-blur-xl' : 'bg-transparent'
+    : 'border-b border-border bg-bg/90 backdrop-blur-sm'
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border bg-bg/90 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        {/* Logo */}
-        <Link to="/submit" className="flex items-center gap-2">
-          <CheckCircle size={22} className="text-accent" />
-          <span className="font-heading text-lg text-text-primary">FitCheck</span>
-        </Link>
-
-        {/* Desktop nav */}
-        <div className="hidden items-center gap-6 md:flex">
-          <Link
-            to="/history"
-            className="flex items-center gap-1.5 font-body text-sm text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <History size={16} />
-            History
-          </Link>
-          <Link
-            to="/settings"
-            className="flex items-center gap-1.5 font-body text-sm text-text-secondary hover:text-text-primary transition-colors"
-          >
-            <Settings size={16} />
-            Settings
+    <>
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBgClass}`}>
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded border border-accent">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M3 8l3.5 3.5L13 4.5"
+                  stroke="#00C4A1"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <span className="font-heading text-lg font-bold text-text-primary">FitCheck</span>
           </Link>
 
-          {/* Avatar dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setAvatarOpen(o => !o)}
-              className="rounded-full focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <Avatar src={user?.avatarUrl} name={user?.displayName || user?.email} size={34} />
-            </button>
-            {avatarOpen && (
-              <div className="absolute right-0 mt-2 w-48 rounded-xl border border-border bg-card p-2 shadow-xl">
-                <div className="px-3 py-2 border-b border-border mb-1">
-                  <p className="font-body text-sm font-medium text-text-primary truncate">
-                    {user?.displayName || 'User'}
-                  </p>
-                  <p className="font-body text-xs text-text-secondary truncate">{user?.email}</p>
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 font-body text-sm text-text-secondary hover:bg-elevated hover:text-text-primary transition-colors"
-                >
-                  <LogOut size={14} />
-                  Sign out
-                </button>
+          {/* Desktop nav */}
+          <div className="hidden items-center gap-8 md:flex">
+            {isLanding && (
+              <div className="flex items-center gap-6">
+                <a href="#how-it-works" className="font-body text-sm text-text-secondary hover:text-text-primary transition-colors">
+                  How it works
+                </a>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Mobile hamburger */}
-        <button
-          className="md:hidden text-text-secondary hover:text-text-primary"
-          onClick={() => setMenuOpen(o => !o)}
-        >
-          {menuOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-      </div>
-
-      {/* Mobile menu */}
-      {menuOpen && (
-        <div className="border-t border-border bg-card px-6 py-4 md:hidden">
-          <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border">
-            <Avatar src={user?.avatarUrl} name={user?.displayName} size={36} />
-            <div>
-              <p className="font-body text-sm font-medium text-text-primary">{user?.displayName}</p>
-              <p className="font-body text-xs text-text-secondary">{user?.email}</p>
+            <div className="flex items-center gap-3">
+              {session ? (
+                <Link
+                  to="/submit"
+                  className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
+                >
+                  Go to App
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="rounded-lg px-4 py-2 text-sm text-text-secondary transition-colors hover:text-text-primary"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-bg transition-opacity hover:opacity-90"
+                  >
+                    Try FitCheck free
+                  </Link>
+                </>
+              )}
             </div>
           </div>
-          <nav className="flex flex-col gap-1">
-            <Link
-              to="/history"
-              onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2.5 font-body text-sm text-text-secondary hover:bg-elevated hover:text-text-primary"
-            >
-              <History size={16} /> History
-            </Link>
-            <Link
-              to="/settings"
-              onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2.5 font-body text-sm text-text-secondary hover:bg-elevated hover:text-text-primary"
-            >
-              <Settings size={16} /> Settings
-            </Link>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-2 rounded-lg px-3 py-2.5 font-body text-sm text-text-secondary hover:bg-elevated hover:text-text-primary"
-            >
-              <LogOut size={16} /> Sign out
-            </button>
-          </nav>
+
+          {/* Mobile hamburger */}
+          <button
+            className="md:hidden text-text-secondary hover:text-text-primary focus:outline-none"
+            aria-label="Toggle navigation menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(o => !o)}
+          >
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile menu overlay */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMenuOpen(false)} />
+          {/* Menu panel */}
+          <div className="absolute top-16 left-0 right-0 border-b border-border bg-card px-6 py-6 shadow-xl flex flex-col gap-4">
+            {isLanding && (
+              <a
+                href="#how-it-works"
+                onClick={() => setMenuOpen(false)}
+                className="block font-body text-base text-text-secondary hover:text-text-primary"
+              >
+                How it works
+              </a>
+            )}
+            
+            <div className="mt-4 flex flex-col gap-3 border-t border-border pt-6">
+              {session ? (
+                <Link
+                  to="/submit"
+                  className="flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-semibold text-bg"
+                >
+                  Go to App
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="flex items-center justify-center rounded-lg border border-border px-4 py-3 text-sm text-text-primary hover:bg-elevated"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-semibold text-bg"
+                  >
+                    Try FitCheck free
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
-    </nav>
+    </>
   )
 }

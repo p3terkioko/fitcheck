@@ -90,13 +90,17 @@ export function Submit() {
             )}
 
             {validationMsg && (
-              <p className="mt-3 font-body text-xs text-[#F59E0B]">{validationMsg}</p>
+              <p role="alert" aria-live="polite" className="mt-3 font-body text-xs text-[#F59E0B]">{validationMsg}</p>
             )}
             {error && (
               <p className="mt-3 font-body text-xs text-[#F04E4E]">{error}</p>
             )}
 
-            <Button onClick={handleSubmit} className="mt-5 w-full py-3">
+            <Button 
+              onClick={handleSubmit} 
+              disabled={(activeTab === 'text' && claimText.trim().length < 10) || (activeTab === 'url' && !urlValue.trim())}
+              className="mt-5 w-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               Verify This Claim →
             </Button>
           </div>
