@@ -1219,6 +1219,7 @@ app.listen(PORT, () => {
     console.log(`   GET  /api/history/stats`);
     console.log(`   POST /api/search`);
     console.log(`🤖 ML Service: ${ML_SERVICE_URL}`);
+    console.log(`🧠 LLM Model: ${process.env.GROQ_MODEL || 'llama-3.1-8b-instant'} (Groq)`);
 });
 
 module.exports = app;
