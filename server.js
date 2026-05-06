@@ -570,6 +570,7 @@ app.get('/health', async (req, res) => {
             status: 'healthy',
             service: 'FitCheck Engine API',
             timestamp: new Date().toISOString(),
+            model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
             ml_service: {
                 status: mlHealthResponse.data.status,
                 database_connected: mlHealthResponse.data.database_connected,
