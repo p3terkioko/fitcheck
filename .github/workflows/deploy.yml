@@ -3,7 +3,7 @@ name: Deploy to DigitalOcean
 on:
   push:
     branches: [main]
-# efvs
+
 jobs:
   deploy:
     runs-on: self-hosted
@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Sync repo to /var/www/fitcheck
         run: |
