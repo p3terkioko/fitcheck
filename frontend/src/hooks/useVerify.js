@@ -33,8 +33,9 @@ export function useVerify() {
     }, 2500)
 
     try {
-      const { result, verificationId } = await api.verify({ claim: claimText, max_results: 5 })
+      const { result, verificationId, modelUsed } = await api.verify({ claim: claimText, max_results: 5 })
       clearInterval(ticker)
+      console.log('[FitCheck] model:', modelUsed)
       setProcessingStep(3)
       setCurrentResult(result)
       setVerificationId(verificationId)
