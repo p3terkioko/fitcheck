@@ -270,8 +270,7 @@ CONFIDENCE SCORE — integer 0-100, map to labels exactly:
 0-24   → "Very little evidence"
 
 LANGUAGE RULES:
-- Short sentences. Max 20 words per sentence.
-- No jargon. Plain English throughout.
+- Plain English. No jargon.
 - Name the mechanism, not just the conclusion.
 - oneLineSummary must state what IS true, not just what is not.
   BAD: "This claim is not supported."
@@ -291,18 +290,18 @@ Start with { and end with }:
   "confidenceScore": <integer 0-100>,
   "confidenceLabel": "<label from mapping>",
   "oneLineSummary": "<one sentence, plain English, states what IS true>",
-  "reasoning": "<2-4 short sentences. No jargon. Name mechanism. Acknowledge nuance briefly.>",
-  "keyPoints": ["<point 1>", "<point 2>", "<point 3>"],
+  "reasoning": "<3-5 sentences. Explain what the evidence shows and why the verdict follows. Name the mechanism. Acknowledge important caveats or gaps. Be specific — reference the studies.>",
+  "keyPoints": ["<10-15 word bullet summarising one key finding>", "<10-15 word bullet>", "<10-15 word bullet>"],
   "evidenceCards": [
     {
-      "title": "<paper title max 80 chars>",
+      "title": "<full paper title>",
       "authors": "<First Author et al.>",
       "year": <year integer or null>,
       "journal": "<journal name or null>",
       "doi": "<doi string or null>",
       "relevanceScore": <similarity * 100 rounded>,
       "stance": "SUPPORTS" | "CONTRADICTS" | "NEUTRAL",
-      "finding": "<one plain-English sentence on what this source contributes>"
+      "finding": "<1-2 sentences: what this specific paper found and why it is relevant to the claim>"
     }
   ],
   "sourcesCount": <integer>,
@@ -323,7 +322,7 @@ Start with { and end with }:
             {
                 model:       process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
                 messages:    [{ role: 'user', content: prompt }],
-                max_tokens:  1500,
+                max_tokens:  2000,
                 temperature: 0.2,
                 top_p:       0.9
             },
