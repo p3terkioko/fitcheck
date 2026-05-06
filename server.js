@@ -320,11 +320,12 @@ Start with { and end with }:
         const groqResponse = await axios.post(
             'https://api.groq.com/openai/v1/chat/completions',
             {
-                model:       process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
-                messages:    [{ role: 'user', content: prompt }],
-                max_tokens:  2000,
-                temperature: 0.2,
-                top_p:       0.9
+                model:           process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+                messages:        [{ role: 'user', content: prompt }],
+                max_tokens:      2000,
+                temperature:     0.2,
+                top_p:           0.9,
+                response_format: { type: 'json_object' }
             },
             {
                 headers: {
@@ -517,10 +518,11 @@ Respond with ONLY this JSON (no markdown, no preamble):
         const resp = await axios.post(
             'https://api.groq.com/openai/v1/chat/completions',
             {
-                model:       process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
-                messages:    [{ role: 'user', content: prompt }],
-                max_tokens:  600,
-                temperature: 0.2
+                model:           process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+                messages:        [{ role: 'user', content: prompt }],
+                max_tokens:      600,
+                temperature:     0.2,
+                response_format: { type: 'json_object' }
             },
             {
                 headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' },
