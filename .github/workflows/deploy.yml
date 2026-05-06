@@ -47,9 +47,9 @@ jobs:
       - name: Restart backend service
         run: |
           cd /var/www/fitcheck
-          pm2 delete fitcheck-node 2>/dev/null || true
-          pm2 start server.js --name fitcheck-node
-          pm2 save
+          sudo pm2 delete fitcheck-node 2>/dev/null || true
+          sudo pm2 start server.js --name fitcheck-node
+          sudo pm2 save
 
       - name: Restart ML service
         run: |
