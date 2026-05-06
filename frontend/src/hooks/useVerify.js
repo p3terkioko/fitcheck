@@ -34,18 +34,16 @@ export function useVerify() {
 
     try {
       const { result, verificationId, metadata } = await api.verify({ claim: claimText, max_results: 5 })
-      clearInterval(ticker)
       console.log('[FitCheck] model:', metadata?.modelUsed)
       setProcessingStep(3)
       setCurrentResult(result)
       setVerificationId(verificationId)
       navigate('/results')
     } catch (err) {
-      clearInterval(ticker)
       setError(err.message)
-      setIsProcessing(false)
       navigate('/submit')
     } finally {
+      clearInterval(ticker)
       setIsProcessing(false)
     }
   }
@@ -72,17 +70,15 @@ export function useVerify() {
 
     try {
       const { data } = await api.analyzeUrl({ url, max_results: 5 })
-      clearInterval(ticker)
       setProcessingStep(3)
       setCurrentData(data)
       setCurrentClaims(data.claims || [])
       navigate('/results')
     } catch (err) {
-      clearInterval(ticker)
       setError(err.message)
-      setIsProcessing(false)
       navigate('/submit')
     } finally {
+      clearInterval(ticker)
       setIsProcessing(false)
     }
   }

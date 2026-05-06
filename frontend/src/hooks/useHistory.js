@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { api } from '../lib/api'
 
 export function useHistory() {
@@ -11,22 +11,36 @@ export function useHistory() {
   const [page, setPage] = useState(1)
   const [verdictFilter, setVerdictFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const debounceRef = useRef(null)
+  const isFirstRender = useRef(true)
 
+  // Load stats once on mount
   useEffect(() => {
-    loadInitial()
+    api.getHistoryStats()
+      .then(res => setStats(res.data))
+      .catch(() => {})
   }, [])
 
-  async function loadInitial() {
+  // Fetch page 1 on mount and whenever filters change (debounced for search)
+  useEffect(() => {
+    clearTimeout(debounceRef.current)
+    const delay = isFirstRender.current ? 0 : searchQuery ? 300 : 0
+    isFirstRender.current = false
+    debounceRef.current = setTimeout(() => fetchPage(1), delay)
+    return () => clearTimeout(debounceRef.current)
+  }, [verdictFilter, searchQuery])
+
+  async function fetchPage(pageNum) {
     setLoading(true)
     try {
-      const [historyRes, statsRes] = await Promise.all([
-        api.getHistory({ page: 1 }),
-        api.getHistoryStats(),
-      ])
-      setItems(historyRes.data.verifications)
-      setPagination(historyRes.data.pagination)
-      setStats(statsRes.data)
-      setPage(1)
+      const res = await api.getHistory({
+        page: pageNum,
+        verdict: verdictFilter !== 'all' ? verdictFilter : undefined,
+        search: searchQuery || undefined,
+      })
+      setItems(res.data.verifications)
+      setPagination(res.data.pagination)
+      setPage(pageNum)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -39,7 +53,11 @@ export function useHistory() {
     setLoadingMore(true)
     try {
       const nextPage = page + 1
-      const res = await api.getHistory({ page: nextPage })
+      const res = await api.getHistory({
+        page: nextPage,
+        verdict: verdictFilter !== 'all' ? verdictFilter : undefined,
+        search: searchQuery || undefined,
+      })
       setItems(prev => [...prev, ...res.data.verifications])
       setPagination(res.data.pagination)
       setPage(nextPage)
@@ -50,16 +68,8 @@ export function useHistory() {
     }
   }
 
-  // Client-side filter
-  const filteredItems = items.filter(item => {
-    const matchesVerdict = verdictFilter === 'all' || item.result?.verdict === verdictFilter
-    const matchesSearch = !searchQuery ||
-      item.claim.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesVerdict && matchesSearch
-  })
-
   return {
-    items: filteredItems,
+    items,
     allItems: items,
     stats,
     pagination,
@@ -69,6 +79,6 @@ export function useHistory() {
     verdictFilter, setVerdictFilter,
     searchQuery, setSearchQuery,
     loadMore,
-    refresh: loadInitial,
+    refresh: () => fetchPage(1),
   }
 }

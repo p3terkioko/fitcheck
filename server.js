@@ -954,23 +954,40 @@ app.post('/api/analyze-url', authenticateToken, verifyRateLimit, async (req, res
  * Paginated verification history for the authenticated user.
  */
 app.get('/api/history', authenticateToken, async (req, res) => {
-    const page  = Math.max(1, parseInt(req.query.page  || '1'));
-    const limit = Math.min(50, parseInt(req.query.limit || '20'));
-    const offset = (page - 1) * limit;
+    const page    = Math.max(1, parseInt(req.query.page  || '1'));
+    const limit   = Math.min(50, parseInt(req.query.limit || '20'));
+    const offset  = (page - 1) * limit;
+    const search  = req.query.search?.trim()  || '';
+    const verdict = req.query.verdict?.trim() || '';
+
+    const conditions = ['user_id = $1'];
+    const params = [req.user.id];
+    let pi = 2;
+
+    if (verdict) {
+        conditions.push(`result->>'verdict' = $${pi++}`);
+        params.push(verdict);
+    }
+    if (search) {
+        conditions.push(`claim ILIKE $${pi++}`);
+        params.push(`%${search}%`);
+    }
+
+    const where = conditions.join(' AND ');
 
     try {
         const [rows, countResult] = await Promise.all([
             pool.query(
                 `SELECT id, claim, result, input_type, source_url, created_at
                  FROM verifications
-                 WHERE user_id = $1
+                 WHERE ${where}
                  ORDER BY created_at DESC
-                 LIMIT $2 OFFSET $3`,
-                [req.user.id, limit, offset]
+                 LIMIT $${pi} OFFSET $${pi + 1}`,
+                [...params, limit, offset]
             ),
             pool.query(
-                'SELECT COUNT(*) FROM verifications WHERE user_id = $1',
-                [req.user.id]
+                `SELECT COUNT(*) FROM verifications WHERE ${where}`,
+                params
             )
         ]);
 
@@ -1077,6 +1094,7 @@ app.post('/api/verify/followup', authenticateToken, async (req, res) => {
         const answer = await answerFollowUp(originalClaim, originalResult, question.trim(), allEvidence);
 
         // Persist the Q&A so it survives page refreshes
+        let saved = true;
         try {
             await pool.query(
                 `INSERT INTO follow_up_questions (verification_id, user_id, question, answer, related_evidence)
@@ -1084,11 +1102,11 @@ app.post('/api/verify/followup', authenticateToken, async (req, res) => {
                 [verificationId, req.user.id, question.trim(), answer.answer, JSON.stringify(answer.relatedEvidence || [])]
             );
         } catch (saveErr) {
-            // Non-fatal — answer is still returned to the client
             console.error('Failed to save follow-up Q&A:', saveErr.message);
+            saved = false;
         }
 
-        res.json({ success: true, data: answer });
+        res.json({ success: true, data: { ...answer, saved } });
 
     } catch (err) {
         console.error('Follow-up error:', err.message);

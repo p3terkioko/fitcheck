@@ -58,7 +58,12 @@ export const api = {
   analyzeUrl:      (data)   => request('POST', '/api/analyze-url', data, 120000),
   followUp:        (data)   => request('POST', '/api/verify/followup', data, 45000),
   getFollowUps:    (id)     => request('GET',  `/api/verify/${id}/followups`),
-  getHistory:      (params) => request('GET',  `/api/history?page=${params?.page || 1}&limit=${params?.limit || 20}`),
+  getHistory:      (params) => {
+    const p = new URLSearchParams({ page: params?.page || 1, limit: params?.limit || 20 })
+    if (params?.verdict) p.set('verdict', params.verdict)
+    if (params?.search)  p.set('search',  params.search)
+    return request('GET', `/api/history?${p}`)
+  },
   getHistoryStats: ()       => request('GET',  '/api/history/stats'),
   getStats:        ()       => request('GET',  '/api/stats'),
 }

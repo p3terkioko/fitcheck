@@ -42,7 +42,7 @@ export function FollowUpPanel({ verificationId }) {
       const { data } = await api.followUp({ verificationId, question })
       setMessages(prev => prev.map((m, i) =>
         i === prev.length - 1
-          ? { question, answer: data.answer, relatedEvidence: data.relatedEvidence || [], error: null, loading: false }
+          ? { question, answer: data.answer, relatedEvidence: data.relatedEvidence || [], error: null, loading: false, saved: data.saved !== false }
           : m
       ))
     } catch (err) {
@@ -97,6 +97,11 @@ export function FollowUpPanel({ verificationId }) {
                   <p className="font-body text-sm text-text-primary">{m.answer}</p>
                   {m.relatedEvidence?.length > 0 && (
                     <EvidenceList evidenceCards={m.relatedEvidence} compact />
+                  )}
+                  {m.saved === false && (
+                    <p className="mt-2 font-body text-xs text-[#F59E0B]">
+                      This answer couldn't be saved — it will be lost on refresh.
+                    </p>
                   )}
                 </div>
               )}
