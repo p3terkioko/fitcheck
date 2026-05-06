@@ -9,9 +9,22 @@ export function FollowUpPanel({ verificationId }) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
-  // Ref-based guard prevents a double-send when the user clicks before the
-  // loading state update propagates (React state is async; refs are synchronous).
   const sendingRef = useRef(false)
+
+  useEffect(() => {
+    if (!verificationId) return
+    api.getFollowUps(verificationId)
+      .then(({ data }) => {
+        setMessages(data.map(row => ({
+          question: row.question,
+          answer: row.answer,
+          relatedEvidence: row.related_evidence || [],
+          error: null,
+          loading: false,
+        })))
+      })
+      .catch(() => {})
+  }, [verificationId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

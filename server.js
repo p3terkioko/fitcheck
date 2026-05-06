@@ -1074,6 +1074,18 @@ app.post('/api/verify/followup', authenticateToken, async (req, res) => {
         // LLM synthesis
         const answer = await answerFollowUp(originalClaim, originalResult, question.trim(), allEvidence);
 
+        // Persist the Q&A so it survives page refreshes
+        try {
+            await pool.query(
+                `INSERT INTO follow_up_questions (verification_id, user_id, question, answer, related_evidence)
+                 VALUES ($1, $2, $3, $4, $5)`,
+                [verificationId, req.user.id, question.trim(), answer.answer, JSON.stringify(answer.relatedEvidence || [])]
+            );
+        } catch (saveErr) {
+            // Non-fatal — answer is still returned to the client
+            console.error('Failed to save follow-up Q&A:', saveErr.message);
+        }
+
         res.json({ success: true, data: answer });
 
     } catch (err) {
@@ -1082,6 +1094,27 @@ app.post('/api/verify/followup', authenticateToken, async (req, res) => {
             return res.status(503).json({ success: false, error: 'Research service unavailable. Please try again.' });
         }
         return res.status(500).json({ success: false, error: 'Failed to generate follow-up answer' });
+    }
+});
+
+/**
+ * GET /api/verify/:id/followups — authenticated
+ * Return saved follow-up Q&A for a verification, oldest first.
+ */
+app.get('/api/verify/:id/followups', authenticateToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const { rows } = await pool.query(
+            `SELECT question, answer, related_evidence, created_at
+             FROM follow_up_questions
+             WHERE verification_id = $1 AND user_id = $2
+             ORDER BY created_at ASC`,
+            [id, req.user.id]
+        );
+        res.json({ success: true, data: rows });
+    } catch (err) {
+        console.error('Get follow-ups error:', err.message);
+        res.status(500).json({ success: false, error: 'Failed to load follow-up history' });
     }
 });
 
