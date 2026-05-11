@@ -270,12 +270,27 @@ CONFIDENCE SCORE — integer 0-100, map to labels exactly:
 0-24   → "Very little evidence"
 
 LANGUAGE RULES:
-- Plain English. No jargon.
-- Name the mechanism, not just the conclusion.
+- Write for someone with no medical or fitness background. Imagine explaining to a friend, not a doctor.
+- ALWAYS translate medical and scientific terms into everyday words. Never use a technical term without immediately explaining it in plain language.
+  Examples of required translations:
+  • cardiovascular → heart and blood vessels
+  • hypertrophy → muscle growth
+  • metabolic → how your body burns energy
+  • anabolic → muscle-building
+  • cortisol → the stress hormone
+  • insulin sensitivity → how well your body controls blood sugar
+  • peer-reviewed → checked and approved by other scientists
+  • placebo → a fake treatment used for comparison
+  • randomised controlled trial → a study where participants are randomly put into groups
+  • ergogenic → performance-enhancing
+  • VO2 max → how much oxygen your body can use during exercise
+  • hypertension → high blood pressure
+  • inflammation → swelling and irritation inside the body
+  If a technical term appears in the source papers, rephrase it — do not copy it directly.
+- Name the mechanism in plain terms, not just the conclusion.
 - oneLineSummary must state what IS true, not just what is not.
   BAD: "This claim is not supported."
-  GOOD: "Spot reduction does not work — fat loss happens body-wide and no
-         exercise can target a specific area."
+  GOOD: "Spot reduction does not work — fat loss happens across your whole body and no exercise can target one specific area."
 - Never say: "as an AI", "clearly", "it is important to note that",
   "studies suggest", "research indicates"
 - Do not end with "consult a professional" — that belongs in profileContext only
@@ -502,9 +517,10 @@ ${evidenceBlock}
 
 Follow-up question: "${question}"
 
-Answer in 2-3 plain-English sentences. Be specific and cite evidence where relevant.
-If the evidence does not directly address this question, say so clearly.
-Do not mention being an AI. Keep language simple and direct.
+Answer in 2-3 sentences written for someone with no medical background.
+Translate any medical or scientific terms into everyday words (e.g. cardiovascular → heart and blood vessels, hypertrophy → muscle growth, cortisol → stress hormone).
+Be specific and cite evidence where relevant. If the evidence does not directly address this question, say so clearly.
+Do not mention being an AI.
 
 Respond with ONLY this JSON (no markdown, no preamble):
 {
