@@ -159,6 +159,38 @@ const followupSchema = Joi.object({
  */
 
 
+async function classifyClaimTopic(claim) {
+    const GROQ_API_KEY = process.env.GROQ_API_KEY;
+    if (!GROQ_API_KEY) return true; // fail open if API unavailable
+
+    try {
+        const response = await axios.post(
+            'https://api.groq.com/openai/v1/chat/completions',
+            {
+                model:       process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+                messages:    [{
+                    role:    'user',
+                    content: `Is this claim about fitness, exercise, nutrition, supplements, or physical/dietary health? Reply with only: true or false.\n\nClaim: "${claim}"`
+                }],
+                max_tokens:  5,
+                temperature: 0
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${GROQ_API_KEY}`,
+                    'Content-Type':  'application/json'
+                },
+                timeout: 8000
+            }
+        );
+        const answer = response.data.choices[0].message.content.trim().toLowerCase();
+        return answer.startsWith('true');
+    } catch (err) {
+        console.error('Topic classification failed, failing open:', err.message);
+        return true; // fail open — don't block users if classification is down
+    }
+}
+
 async function synthesizeResponse(claim, searchResults, userContext = null) {
 
     // ── Empty results ────────────────────────────────────────────────────
@@ -718,6 +750,35 @@ app.post('/api/verify', authenticateToken, verifyRateLimit, async (req, res) => 
     }
 
     const { claim, max_results, similarity_threshold, llm_provider } = value;
+
+    // Reject non-fitness claims before touching the RAG pipeline
+    const isFitnessClaim = await classifyClaimTopic(claim);
+    if (!isFitnessClaim) {
+        return res.json({
+            success: true,
+            claim,
+            result: {
+                verdict:                 'OFF_TOPIC',
+                verdictLabel:            'Not a fitness claim',
+                confidenceScore:         0,
+                confidenceLabel:         'Not applicable',
+                oneLineSummary:          'FitCheck only verifies claims about fitness, exercise, nutrition, and physical health.',
+                reasoning:               'This claim does not appear to be about fitness, exercise, nutrition, supplements, or physical health. FitCheck\'s research database contains peer-reviewed studies in these areas only. Please submit a claim related to one of those topics.',
+                keyPoints:               [],
+                evidenceCards:           [],
+                sourcesCount:            0,
+                reliabilityNote:         null,
+                insufficientEvidenceNote: null,
+                profileContext:          null
+            },
+            verificationId: null,
+            metadata: {
+                totalProcessingTimeMs: Date.now() - startTime,
+                offTopic:              true,
+                timestamp:             new Date().toISOString()
+            }
+        });
+    }
 
     // Build userContext from authenticated user's stored profile
     const userContext = req.user.onboarding_completed ? {
